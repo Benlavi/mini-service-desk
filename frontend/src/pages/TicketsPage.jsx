@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../api/client.js";
 import { useAuth } from "../auth/AuthContext.jsx";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 export default function TicketsPage() {
   const { token, logout } = useAuth();
@@ -45,7 +45,6 @@ export default function TicketsPage() {
           subject,
           body,
           request_type: requestType,
-          // urgency optional (your backend default exists)
         },
       });
 
@@ -78,17 +77,30 @@ export default function TicketsPage() {
           <form onSubmit={createTicket} style={{ display: "grid", gap: 10 }}>
             <label>
               Subject
-              <input value={subject} onChange={(e) => setSubject(e.target.value)} style={{ width: "100%", padding: 10, marginTop: 6 }} />
+              <input
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                style={{ width: "100%", padding: 10, marginTop: 6 }}
+              />
             </label>
 
             <label>
               Body
-              <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={6} style={{ width: "100%", padding: 10, marginTop: 6 }} />
+              <textarea
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                rows={6}
+                style={{ width: "100%", padding: 10, marginTop: 6 }}
+              />
             </label>
 
             <label>
               Request type
-              <select value={requestType} onChange={(e) => setRequestType(e.target.value)} style={{ width: "100%", padding: 10, marginTop: 6 }}>
+              <select
+                value={requestType}
+                onChange={(e) => setRequestType(e.target.value)}
+                style={{ width: "100%", padding: 10, marginTop: 6 }}
+              >
                 <option value="it">IT</option>
                 <option value="hardware">Hardware</option>
                 <option value="software">Software</option>
@@ -102,7 +114,7 @@ export default function TicketsPage() {
         </section>
 
         <section style={{ border: "1px solid #ddd", padding: 16, borderRadius: 8 }}>
-          <h2 style={{ marginTop: 0 }}>My tickets / All tickets</h2>
+          <h2 style={{ marginTop: 0 }}>My tickets</h2>
 
           {loading ? (
             <div>Loading...</div>
@@ -113,7 +125,9 @@ export default function TicketsPage() {
               {tickets.map((t) => (
                 <li key={t.id} style={{ marginBottom: 10 }}>
                   <div>
-                    <b>#{t.id}</b> {t.subject}
+                    <Link to={`/tickets/${t.id}`} style={{ textDecoration: "none" }}>
+                      <b>#{t.id}</b> {t.subject}
+                    </Link>
                   </div>
                   <div style={{ fontSize: 13, opacity: 0.8 }}>
                     status: {t.status} | urgency: {t.urgency} | type: {t.request_type}

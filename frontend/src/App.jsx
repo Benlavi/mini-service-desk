@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
 import TicketsPage from "./pages/TicketsPage";
 import RequireAuth from "./auth/RequireAuth";
+import TicketsDetailsPage from "./pages/TicketsDetailsPage";
 
 
 export default function App() {
@@ -17,6 +18,14 @@ export default function App() {
           </RequireAuth>
         }
         />
+        <Route
+        path="/tickets/:id"
+        element={
+          <RequireAuth>
+            <TicketsDetailsPage />
+          </RequireAuth>
+        }
+      />
       <Route path="*" element={<h2>404</h2>} />
     </Routes>
   );
