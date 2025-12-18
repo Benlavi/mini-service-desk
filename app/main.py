@@ -3,6 +3,7 @@ from app.database import init_db
 from app.routers import health
 from app.routers import users
 from app.routers import tickets
+from app.routers import comments
 
 app = FastAPI()
 
@@ -13,6 +14,7 @@ def on_startup():
 app.include_router(health.router, prefix="/api")
 app.include_router(users.router, prefix="/api")
 app.include_router(tickets.router, prefix="/api")
+app.include_router(comments.router, prefix="/api")
 
 @app.get("/")
 def read_root():
