@@ -43,6 +43,20 @@ async def read_current_user(current_user: User = Depends(get_current_user)):
     return current_user
 
 
+
+# ========= LIST OPERATORS (ADMINS ONLY) =========
+
+@router.get("/operators", response_model=list[UserRead])
+def list_operators(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    operators = session.exec(select(User).where(User.is_admin == True)).all()
+    return operators
+
 # ========= GET USER BY ID =========
 
 @router.get("/{user_id}", response_model=UserRead)
