@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { apiFetch } from "../api/client.js";
 import { useAuth } from "../auth/AuthContext.jsx";
+import Shell from "../components/shell.jsx";
 
 export default function AdminDashboardPage() {
   const { token, logout } = useAuth();
@@ -57,73 +58,93 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div style={{ maxWidth: 1000, margin: "30px auto", fontFamily: "system-ui" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h1>Admin Dashboard</h1>
-        <button onClick={onLogout}>Logout</button>
-      </div>
+    <>
+      <Shell
+        title="Admin Dashboard"
+        subtitle="Review and manage all tickets"
+        right={
+          <button className="btn ghost" onClick={onLogout}>
+            Logout
+          </button>
+        }
+      >
+        {err && <div className="error">{err}</div>}
 
-      {err && <div style={{ color: "crimson", marginBottom: 12 }}>{err}</div>}
+        <div className="grid">
+          <section className="card">
+            <h3 className="cardTitle">Overview</h3>
 
-      <section style={{ border: "1px solid #ddd", padding: 16, borderRadius: 8, marginBottom: 16 }}>
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-          <div><b>Total:</b> {stats.total}</div>
-          {Object.entries(stats.byStatus).map(([k, v]) => (
-            <div key={k}><b>{k}:</b> {v}</div>
-          ))}
+            <div className="meta" style={{ marginBottom: 10 }}>
+              Total tickets: <b>{stats.total}</b>
+            </div>
+
+            <div className="row" style={{ flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
+              {Object.entries(stats.byStatus).map(([k, v]) => (
+                <span key={k} className="badge">
+                  {k}: {v}
+                </span>
+              ))}
+            </div>
+
+            <div className="form">
+              <div>
+                <div className="label">Status</div>
+                <select
+                  className="select"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
+                  <option value="all">All</option>
+                  <option value="new">new</option>
+                  <option value="in_progress">in_progress</option>
+                  <option value="resolved">resolved</option>
+                  <option value="closed">closed</option>
+                </select>
+              </div>
+
+              <div>
+                <div className="label">Search</div>
+                <input
+                  className="input"
+                  placeholder="Search id / subject / body…"
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                />
+              </div>
+
+              <button className="btn primary" onClick={loadTickets}>
+                Refresh
+              </button>
+            </div>
+          </section>
+
+          <section className="card">
+            <h3 className="cardTitle">All tickets</h3>
+
+            {loading ? (
+              <div className="meta">Loading…</div>
+            ) : filtered.length === 0 ? (
+              <div className="meta">No matching tickets.</div>
+            ) : (
+              <ul className="list">
+                {filtered.map((t) => (
+                  <li key={t.id} className="listItem">
+                    <Link className="link" to={`/admin/tickets/${t.id}`}>
+                      <div>
+                        <b>#{t.id}</b> — {t.subject}
+                      </div>
+                      <div className="meta">
+                        status: {t.status} • urgency: {t.urgency} • type: {t.request_type} • operator:{" "}
+                        {t.operator_id ?? "—"}
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
         </div>
-
-        <div style={{ display: "flex", gap: 12, marginTop: 12, flexWrap: "wrap" }}>
-          <label>
-            Status
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              style={{ marginLeft: 8, padding: 8 }}
-            >
-              <option value="all">All</option>
-              <option value="new">new</option>
-              <option value="in_progress">in_progress</option>
-              <option value="resolved">resolved</option>
-              <option value="closed">closed</option>
-            </select>
-          </label>
-
-          <input
-            placeholder="Search id / subject / body…"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            style={{ padding: 8, flex: "1 1 280px" }}
-          />
-
-          <button onClick={loadTickets}>Refresh</button>
-        </div>
-      </section>
-
-      <section style={{ border: "1px solid #ddd", padding: 16, borderRadius: 8 }}>
-        <h2 style={{ marginTop: 0 }}>All tickets</h2>
-
-        {loading ? (
-          <div>Loading…</div>
-        ) : filtered.length === 0 ? (
-          <div>No matching tickets.</div>
-        ) : (
-          <ul style={{ paddingLeft: 18 }}>
-            {filtered.map((t) => (
-              <li key={t.id} style={{ marginBottom: 10 }}>
-                <Link to={`/admin/tickets/${t.id}`} style={{ textDecoration: "none" }}>
-                  <div>
-                    <b>#{t.id}</b> {t.subject}
-                  </div>
-                  <div style={{ fontSize: 13, opacity: 0.8 }}>
-                    status: {t.status} | urgency: {t.urgency} | type: {t.request_type} | operator_id: {t.operator_id ?? "—"}
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-    </div>
+      </Shell>
+    </>
   );
 }

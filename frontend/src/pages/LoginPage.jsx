@@ -44,41 +44,35 @@ export default function LoginPage() {
     }
   }
 
+
   return (
-    <div style={{ maxWidth: 420, margin: "60px auto", fontFamily: "system-ui" }}>
-      <h1>Mini Service Desk</h1>
-      <h2 style={{ fontWeight: 500 }}>Login</h2>
+    <div className="app">
+      <div className="container" style={{ maxWidth: 520 }}>
+        <div className="page-head">
+          <h1 className="h1">Welcome back</h1>
+          <p className="sub">Login to manage your tickets</p>
+        </div>
 
-      <form onSubmit={onSubmit} style={{ display: "grid", gap: 12 }}>
-        <label>
-          Email
-          <input
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="admin@example.com"
-            style={{ width: "100%", padding: 10, marginTop: 6 }}
-            autoComplete="username"
-          />
-        </label>
+        <div className="card solid">
+          <form onSubmit={onSubmit} style={{ display: "grid", gap: 12 }}>
+            <div>
+              <label className="label">Email</label>
+              <input className="input" value={email} onChange={(e)=>setEmail(e.target.value)} placeholder="admin@example.com" />
+            </div>
 
-        <label>
-          Password
-          <input
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            type="password"
-            placeholder="••••••••"
-            style={{ width: "100%", padding: 10, marginTop: 6 }}
-            autoComplete="current-password"
-          />
-        </label>
+            <div>
+              <label className="label">Password</label>
+              <input className="input" type="password" value={password} onChange={(e)=>setPassword(e.target.value)} placeholder="••••••••" />
+            </div>
 
-        <button disabled={loading} style={{ padding: 10 }}>
-          {loading ? "Logging in..." : "Login"}
-        </button>
+            <button className="btn" disabled={loading}>
+              {loading ? "Logging in..." : "Login"}
+            </button>
 
-        {err && <div style={{ color: "crimson" }}>{err}</div>}
-      </form>
+            {err && <div className="error">{err}</div>}
+          </form>
+        </div>
+      </div>
     </div>
   );
 }

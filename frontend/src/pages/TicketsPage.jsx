@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "../api/client.js";
 import { useAuth } from "../auth/AuthContext.jsx";
 import { useNavigate, Link } from "react-router-dom";
+import Shell from "../components/shell.jsx";
 
 export default function TicketsPage() {
   const { token, logout } = useAuth();
@@ -62,82 +63,69 @@ export default function TicketsPage() {
     navigate("/login");
   }
 
-  return (
-    <div style={{ maxWidth: 900, margin: "30px auto", fontFamily: "system-ui" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h1>Tickets</h1>
-        <button onClick={onLogout}>Logout</button>
-      </div>
+return (
+  <>
+    <Shell title="Tickets" subtitle="Create a ticket and track progress">
+      {err && <div className="error">{err}</div>}
 
-      {err && <div style={{ color: "crimson", marginBottom: 12 }}>{err}</div>}
+      <div className="grid">
+        <section className="card">
+          <h3 className="cardTitle">Create ticket</h3>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-        <section style={{ border: "1px solid #ddd", padding: 16, borderRadius: 8 }}>
-          <h2 style={{ marginTop: 0 }}>Create Ticket</h2>
-          <form onSubmit={createTicket} style={{ display: "grid", gap: 10 }}>
-            <label>
-              Subject
-              <input
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                style={{ width: "100%", padding: 10, marginTop: 6 }}
-              />
-            </label>
+          <form onSubmit={createTicket} className="form">
+            <div>
+              <div className="label">Subject</div>
+              <input className="input" value={subject} onChange={(e) => setSubject(e.target.value)} />
+            </div>
 
-            <label>
-              Body
-              <textarea
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                rows={6}
-                style={{ width: "100%", padding: 10, marginTop: 6 }}
-              />
-            </label>
+            <div>
+              <div className="label">Body</div>
+              <textarea className="textarea" value={body} onChange={(e) => setBody(e.target.value)} />
+            </div>
 
-            <label>
-              Request type
-              <select
-                value={requestType}
-                onChange={(e) => setRequestType(e.target.value)}
-                style={{ width: "100%", padding: 10, marginTop: 6 }}
-              >
+            <div>
+              <div className="label">Request type</div>
+              <select className="select" value={requestType} onChange={(e) => setRequestType(e.target.value)}>
                 <option value="it">IT</option>
                 <option value="hardware">Hardware</option>
                 <option value="software">Software</option>
                 <option value="access">Access</option>
                 <option value="other">Other</option>
               </select>
-            </label>
+            </div>
 
-            <button disabled={!subject || !body}>Open ticket</button>
+            <button className="btn primary" disabled={!subject || !body}>
+              Open ticket
+            </button>
           </form>
         </section>
 
-        <section style={{ border: "1px solid #ddd", padding: 16, borderRadius: 8 }}>
-          <h2 style={{ marginTop: 0 }}>My tickets</h2>
+        <section className="card">
+          <h3 className="cardTitle">My tickets</h3>
 
           {loading ? (
-            <div>Loading...</div>
+            <div className="meta">Loading…</div>
           ) : tickets.length === 0 ? (
-            <div>No tickets yet.</div>
+            <div className="meta">No tickets yet.</div>
           ) : (
-            <ul style={{ paddingLeft: 18 }}>
+            <ul className="list">
               {tickets.map((t) => (
-                <li key={t.id} style={{ marginBottom: 10 }}>
-                  <div>
-                    <Link to={`/tickets/${t.id}`} style={{ textDecoration: "none" }}>
-                      <b>#{t.id}</b> {t.subject}
-                    </Link>
-                  </div>
-                  <div style={{ fontSize: 13, opacity: 0.8 }}>
-                    status: {t.status} | urgency: {t.urgency} | type: {t.request_type}
-                  </div>
+                <li key={t.id} className="listItem">
+                  <Link className="link" to={`/tickets/${t.id}`}>
+                    <div>
+                      <b>#{t.id}</b> — {t.subject}
+                    </div>
+                    <div className="meta">
+                      status: {t.status} • urgency: {t.urgency} • type: {t.request_type}
+                    </div>
+                  </Link>
                 </li>
               ))}
             </ul>
           )}
         </section>
       </div>
-    </div>
-  );
+    </Shell>
+  </>
+);
 }

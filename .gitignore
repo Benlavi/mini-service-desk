@@ -22,3 +22,6 @@ wheels/
 # Vite cache
 frontend/.vite/
 frontend/.vite/*
+
+# VS Code
+.vscode/

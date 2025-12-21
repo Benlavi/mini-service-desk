@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { apiFetch } from "../api/client.js";
 import { useAuth } from "../auth/AuthContext.jsx";
+import Shell from "../components/shell.jsx";
 
 export default function TicketsDetailsPage() {
   const { id } = useParams();
@@ -51,54 +52,75 @@ export default function TicketsDetailsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  if (err) return <div style={{ padding: 16 }}>Error: {err}</div>;
-  if (!ticket) return <div style={{ padding: 16 }}>Loading…</div>;
+  if (err) return <div className="container"><div className="error">Error: {err}</div></div>;
+  if (!ticket) return <div className="container">Loading…</div>;
 
   return (
-    <div style={{ maxWidth: 900, margin: "30px auto", fontFamily: "system-ui" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <Link to="/tickets">← Back</Link>
-        <button onClick={onLogout}>Logout</button>
+    <Shell
+      title={`Ticket #${ticket.id}`}
+      subtitle={ticket.subject}
+      right={
+        <button className="btn ghost" onClick={onLogout}>
+          Logout
+        </button>
+      }
+    >
+      <div style={{ marginBottom: 12 }}>
+        <Link className="navlink" to="/tickets">← Back</Link>
       </div>
 
-      <h2 style={{ marginTop: 12 }}>
-        Ticket #{ticket.id}: {ticket.subject}
-      </h2>
+      <div className="grid-2">
+        <section className="card">
+          <h2>Ticket details</h2>
 
-      <div style={{ padding: 12, border: "1px solid #ddd", borderRadius: 8 }}>
-        <p><b>Status:</b> {ticket.status}</p>
-        <p><b>Urgency:</b> {ticket.urgency}</p>
-        <p><b>Type:</b> {ticket.request_type}</p>
-        <p><b>Body:</b><br />{ticket.body}</p>
+          <div className="row" style={{ flexWrap: "wrap", marginBottom: 10 }}>
+            <span className="badge">status: {ticket.status}</span>
+            <span className="badge">urgency: {ticket.urgency}</span>
+            <span className="badge">type: {ticket.request_type}</span>
+          </div>
+
+          <div className="card solid" style={{ padding: 14 }}>
+            <div className="label">Body</div>
+            <div style={{ whiteSpace: "pre-wrap" }}>{ticket.body}</div>
+          </div>
+        </section>
+
+        <section className="card">
+          <div className="spread">
+            <h2 style={{ margin: 0 }}>Comments</h2>
+            <span className="badge">{comments.length}</span>
+          </div>
+
+          {comments.length === 0 ? (
+            <div className="meta" style={{ marginTop: 12 }}>No comments yet.</div>
+          ) : (
+            <ul className="list" style={{ marginTop: 12 }}>
+              {comments.map((c) => (
+                <li key={c.id} className="item">
+                  <div className="spread">
+                    <div style={{ fontWeight: 650 }}>author_id: {c.author_id}</div>
+                    <div className="meta">{new Date(c.created_at).toLocaleString()}</div>
+                  </div>
+                  <div style={{ marginTop: 8, whiteSpace: "pre-wrap" }}>{c.body}</div>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <form onSubmit={addComment} style={{ marginTop: 14, display: "grid", gap: 10 }}>
+            <textarea
+              className="textarea"
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              rows={4}
+              placeholder="Write a comment…"
+            />
+            <div className="row" style={{ justifyContent: "flex-end" }}>
+              <button className="btn" disabled={!newComment}>Add comment</button>
+            </div>
+          </form>
+        </section>
       </div>
-
-      <h3 style={{ marginTop: 24 }}>Comments</h3>
-
-      {comments.length === 0 ? (
-        <div>No comments yet.</div>
-      ) : (
-        <ul style={{ paddingLeft: 18 }}>
-          {comments.map((c) => (
-            <li key={c.id} style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: 13, opacity: 0.8 }}>
-                author_id: {c.author_id} | {new Date(c.created_at).toLocaleString()}
-              </div>
-              <div>{c.body}</div>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <form onSubmit={addComment} style={{ marginTop: 16, display: "grid", gap: 10 }}>
-        <textarea
-          value={newComment}
-          onChange={(e) => setNewComment(e.target.value)}
-          rows={4}
-          placeholder="Write a comment…"
-          style={{ width: "100%", padding: 10 }}
-        />
-        <button disabled={!newComment}>Add comment</button>
-      </form>
-    </div>
+    </Shell>
   );
 }
