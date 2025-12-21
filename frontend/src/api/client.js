@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_BASE || "";
+const base = import.meta.env.VITE_API_BASE_URL || "";
 
 export async function apiFetch(path, { token, method = "GET", json, form } = {}) {
   const headers = { Accept: "application/json" };
@@ -18,10 +18,14 @@ export async function apiFetch(path, { token, method = "GET", json, form } = {})
 
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const url = path.startsWith("http") ? path : `${API_BASE}${path}`;
+  const url = path.startsWith("http")
+    ? path
+    : base
+      ? new URL(path, base).toString()
+      : path;
+
   const res = await fetch(url, { method, headers, body });
 
-  // Try to parse JSON error nicely
   const text = await res.text();
   let data = null;
   try {
@@ -32,7 +36,11 @@ export async function apiFetch(path, { token, method = "GET", json, form } = {})
 
   if (!res.ok) {
     const message =
-      (data && data.detail && (typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail))) ||
+      (data &&
+        data.detail &&
+        (typeof data.detail === "string"
+          ? data.detail
+          : JSON.stringify(data.detail))) ||
       (typeof data === "string" ? data : "Request failed");
     throw new Error(`${res.status} ${message}`);
   }
