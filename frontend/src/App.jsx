@@ -6,6 +6,8 @@ import AdminDashboardPage from "./pages/AdminDashboardPage.jsx";
 import AdminTicketPage from "./pages/AdminTicketPage.jsx";
 import RequireAuth from "./auth/RequireAuth";
 import RequireAdmin from "./auth/RequireAdmin";
+import RegisterPage from "./pages/RegisterPage";
+
 
 export default function App() {
   return (
@@ -13,6 +15,8 @@ export default function App() {
       <Route path="/" element={<Navigate to="/tickets" replace />} />
 
       <Route path="/login" element={<LoginPage />} />
+
+      <Route path="/register" element={<RegisterPage />} />
 
       <Route
         path="/tickets"
@@ -49,6 +53,7 @@ export default function App() {
           </RequireAdmin>
         }
       />
+
 
       <Route path="*" element={<h2>404</h2>} />
     </Routes>

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { apiFetch } from "../api/client.js";
 import { useAuth } from "../auth/AuthContext.jsx";
+import { Link } from "react-router-dom";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -68,6 +69,10 @@ export default function LoginPage() {
             <button className="btn" disabled={loading}>
               {loading ? "Logging in..." : "Login"}
             </button>
+
+            <div className="meta">
+              No account yet? <Link className="link" to="/register">Create one</Link>
+            </div>
 
             {err && <div className="error">{err}</div>}
           </form>
