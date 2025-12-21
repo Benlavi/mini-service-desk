@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { apiFetch } from "../api/client.js";
-import Shell from "../components/shell.jsx";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -21,15 +20,9 @@ export default function RegisterPage() {
     try {
       await apiFetch("/api/users/", {
         method: "POST",
-        json: {
-          name,
-          email,
-          password,
-          is_admin: false, // IMPORTANT: user cannot register as admin
-        },
+        json: { name, email, password, is_admin: false },
       });
 
-      // After successful register -> go login
       navigate("/login", { replace: true });
     } catch (e) {
       setErr(e.message);
@@ -39,7 +32,12 @@ export default function RegisterPage() {
   }
 
   return (
-    <Shell title="Create account" subtitle="Register to open and track tickets">
+    <div className="container">
+      <div style={{ marginBottom: 16 }}>
+        <h1 className="h1">Create account</h1>
+        <div className="h2">Register to open and track tickets</div>
+      </div>
+
       {err && <div className="error">{err}</div>}
 
       <section className="card" style={{ maxWidth: 520 }}>
@@ -52,7 +50,7 @@ export default function RegisterPage() {
               className="input"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Ben"
+              placeholder="Your name"
             />
           </div>
 
@@ -62,7 +60,7 @@ export default function RegisterPage() {
               className="input"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="ben@example.com"
+              placeholder="name@example.com"
             />
           </div>
 
@@ -73,19 +71,25 @@ export default function RegisterPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder="At least 8 characters"
             />
           </div>
 
-          <button className="btn primary" disabled={loading || !name || !email || !password}>
+          <button
+            className="btn primary"
+            disabled={loading || !name || !email || !password}
+          >
             {loading ? "Creating..." : "Create account"}
           </button>
 
           <div className="meta">
-            Already have an account? <Link className="link" to="/login">Login</Link>
+            Already have an account?{" "}
+            <Link className="link" to="/login">
+              Login
+            </Link>
           </div>
         </form>
       </section>
-    </Shell>
+    </div>
   );
 }

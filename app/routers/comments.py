@@ -3,7 +3,12 @@ from sqlmodel import Session, select
 
 from app.database import get_session
 from app.models.ticket import Ticket
-from app.models.comment import TicketComment, TicketCommentCreate, TicketCommentRead, now_utc
+from app.models.comment import (
+    TicketComment,
+    TicketCommentCreate,
+    TicketCommentRead,
+    now_utc,
+)
 from app.models.user import User
 from app.services.security import get_current_user
 

@@ -79,7 +79,9 @@ def test_admin_can_list_all_and_patch_any_ticket(client):
     assert r.status_code == 201, r.text
     tid = r.json()["id"]
 
-    admin, admin_email = create_user(client, "Admin", password="admin1234", is_admin=True)
+    admin, admin_email = create_user(
+        client, "Admin", password="admin1234", is_admin=True
+    )
     admin_token = login(client, admin_email, "admin1234")
 
     r = client.get(f"{BASE}/", headers=auth_header(admin_token))

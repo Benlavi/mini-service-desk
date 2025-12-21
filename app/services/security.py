@@ -6,7 +6,7 @@ from jwt.exceptions import InvalidTokenError
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from pwdlib import PasswordHash
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from app.database import get_session
 from app.models.user import User
@@ -24,6 +24,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/users/login")
 
 # ====================== PASSWORD HELPERS =====================
 
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return password_hash.verify(plain_password, hashed_password)
 
@@ -34,11 +35,14 @@ def hash_password(password: str) -> str:
 
 # ====================== JWT TOKEN ============================
 
+
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
     to_encode = data.copy()
 
     expire = datetime.now(timezone.utc) + (
-        expires_delta if expires_delta else timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        expires_delta
+        if expires_delta
+        else timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     )
     to_encode.update({"exp": expire})
 
@@ -48,11 +52,11 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
 
 # ====================== CURRENT USER ==========================
 
+
 async def get_current_user(
     token: Annotated[str, Depends(oauth2_scheme)],
     session: Session = Depends(get_session),
 ) -> User:
-
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -77,6 +81,7 @@ async def get_current_user(
 
 
 # ====================== REQUIRE ADMIN USER ==========================
+
 
 def require_admin(current_user: User = Depends(get_current_user)) -> User:
     if not current_user.is_admin:

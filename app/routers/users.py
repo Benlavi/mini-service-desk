@@ -4,7 +4,6 @@ from sqlmodel import Session, select
 
 from app.database import get_session
 from app.models.user import User, UserCreate, UserRead
-from app.models.token import Token
 from app.services.security import (
     hash_password,
     verify_password,
@@ -17,6 +16,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 # ========= CREATE USER =========
 
+
 @router.post("/", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 def create_user(data: UserCreate, session: Session = Depends(get_session)):
     existing = session.exec(select(User).where(User.email == data.email)).first()
@@ -27,7 +27,7 @@ def create_user(data: UserCreate, session: Session = Depends(get_session)):
         name=data.name,
         email=data.email,
         hashed_password=hash_password(data.password),
-        is_admin=data.is_admin, 
+        is_admin=data.is_admin,
     )
 
     session.add(new_user)
@@ -38,13 +38,14 @@ def create_user(data: UserCreate, session: Session = Depends(get_session)):
 
 # ========= CURRENT USER (PROTECTED) =========
 
+
 @router.get("/me", response_model=UserRead)
 async def read_current_user(current_user: User = Depends(get_current_user)):
     return current_user
 
 
-
 # ========= LIST OPERATORS (ADMINS ONLY) =========
+
 
 @router.get("/operators", response_model=list[UserRead])
 def list_operators(
@@ -54,10 +55,12 @@ def list_operators(
     if not current_user.is_admin:
         raise HTTPException(status_code=403, detail="Admin only")
 
-    operators = session.exec(select(User).where(User.is_admin == True)).all()
+    operators = session.exec(select(User).where(User.is_admin)).all()
     return operators
 
+
 # ========= GET USER BY ID =========
+
 
 @router.get("/{user_id}", response_model=UserRead)
 def get_user(user_id: int, session: Session = Depends(get_session)):
@@ -68,6 +71,7 @@ def get_user(user_id: int, session: Session = Depends(get_session)):
 
 
 # ========= LOGIN (OAuth2 password flow) =========
+
 
 @router.post("/login")
 def login(

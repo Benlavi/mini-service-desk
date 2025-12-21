@@ -24,15 +24,16 @@ class Ticket(SQLModel, table=True):
     created_at: datetime = Field(default_factory=now_utc())
     updated_at: datetime = Field(default_factory=now_utc())
 
+
 # ---------- INPUT MODEL ----------
 class TicketCreate(SQLModel):
     subject: str
     body: str
     urgency: str = "normal"
     request_type: str
-    
 
-#---------- UPDATE MODEL ----------
+
+# ---------- UPDATE MODEL ----------
 class TicketUpdate(SQLModel):
     subject: Optional[str] = None
     body: Optional[str] = None
@@ -40,6 +41,7 @@ class TicketUpdate(SQLModel):
     urgency: Optional[str] = None
     request_type: Optional[str] = None
     operator_id: Optional[int] = None
+
 
 # ---------- OUTPUT MODEL ----------
 class TicketRead(SQLModel):

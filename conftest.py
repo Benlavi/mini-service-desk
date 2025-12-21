@@ -10,9 +10,11 @@ from app.database import get_session
 TEST_DB_URL = "sqlite:///./test.db"
 engine = create_engine(TEST_DB_URL, connect_args={"check_same_thread": False})
 
+
 def override_get_session():
     with Session(engine) as session:
         yield session
+
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_db():
@@ -23,6 +25,7 @@ def setup_db():
     yield
     if os.path.exists("test.db"):
         os.remove("test.db")
+
 
 @pytest.fixture()
 def client():

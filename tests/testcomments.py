@@ -36,7 +36,9 @@ def test_user_can_add_and_list_comments_on_own_ticket(client):
     create_user(client, "U1", "u1@example.com", "pass1234", is_admin=False)
     token = login(client, "u1@example.com", "pass1234")
 
-    tid = create_ticket(client, token, subject="Printer", body="Broken", request_type="hardware")
+    tid = create_ticket(
+        client, token, subject="Printer", body="Broken", request_type="hardware"
+    )
 
     # Add comment
     r = client.post(
