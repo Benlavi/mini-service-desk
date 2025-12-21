@@ -1,8 +1,7 @@
 import os
-from sqlmodel import SQLModel, create_engine, Session
+from sqlmodel import SQLModel, Session, create_engine
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./database.db")
-
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///database.db")
 
 connect_args = {}
 if DATABASE_URL.startswith("sqlite"):
@@ -10,14 +9,12 @@ if DATABASE_URL.startswith("sqlite"):
 
 engine = create_engine(
     DATABASE_URL,
-    echo=os.getenv("SQL_ECHO", "false").lower() == "true",
+    echo=True,
     connect_args=connect_args,
 )
 
-
 def init_db():
     SQLModel.metadata.create_all(engine)
-
 
 def get_session():
     with Session(engine) as session:
