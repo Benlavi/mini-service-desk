@@ -7,8 +7,15 @@ from app.routers import tickets
 from app.routers import comments
 from fastapi.middleware.cors import CORSMiddleware
 
+ENV = os.getenv("ENV", "dev")  # "prod" on Render
 
-app = FastAPI()
+app = FastAPI(
+    title="Mini Service Desk",
+    docs_url=None if ENV == "prod" else "/docs",
+    redoc_url=None if ENV == "prod" else "/redoc",
+    openapi_url=None if ENV == "prod" else "/openapi.json",
+)
+
 
 
 @app.on_event("startup")
