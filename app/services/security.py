@@ -1,3 +1,4 @@
+import os
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
@@ -13,7 +14,7 @@ from app.models.user import User
 
 
 # ====================== CONFIG ============================
-SECRET_KEY = "CHANGE_THIS_TO_A_REAL_RANDOM_32BYTE_KEY"
+SECRET_KEY = os.getenv("SECRTET_KEY", "1qaz3edc5tgb6yhn7ujm8ik,9ol.0p;/")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
