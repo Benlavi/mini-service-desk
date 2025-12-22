@@ -31,7 +31,7 @@ app.include_router(comments.router, prefix="/api")
 
 @app.get("/")
 def read_root():
-    return {"message": "Fitness API is running!"}
+    return {"message": "Service Desk API is running!"}
 
 
 
