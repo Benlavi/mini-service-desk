@@ -236,3 +236,156 @@ body{
   font-weight: 600;
   color: var(--text);
 }
+
+
+/* ====== Table / Grid ====== */
+.tableWrap {
+  overflow: auto;
+  border-radius: var(--radius);
+  border: 1px solid var(--cardBorder);
+  background: rgba(255,255,255,0.55);
+}
+
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 980px;
+}
+
+.th, .td {
+  padding: 12px 12px;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  vertical-align: middle;
+}
+
+.th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: rgba(245,245,247,0.92);
+  backdrop-filter: blur(10px);
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+  text-transform: none;
+  user-select: none;
+}
+
+.tr:hover .td {
+  background: rgba(255,255,255,0.75);
+}
+
+.thBtn {
+  all: unset;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sortIcon {
+  font-size: 12px;
+  opacity: 0.65;
+}
+
+.checkbox {
+  width: 16px;
+  height: 16px;
+}
+
+.toolbarRow {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.pillRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 10px 0 0;
+}
+
+.pill {
+  border: 1px solid rgba(0,0,0,0.12);
+  background: rgba(255,255,255,0.65);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.pill b { color: var(--text); }
+
+.btn.ghost{
+  background: rgba(255,255,255,0.65);
+  border: 1px solid rgba(0,0,0,0.12);
+  color: var(--text);
+}
+
+.modalOverlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding: 18px;
+  z-index: 50;
+}
+
+.modal{
+  width: 100%;
+  max-width: 860px;
+  background: rgba(255,255,255,0.92);
+  border: 1px solid rgba(0,0,0,0.12);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  padding: 16px;
+  backdrop-filter: blur(14px);
+}
+
+.modalHead{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.ruleRow{
+  display:grid;
+  grid-template-columns: 160px 160px 1fr auto;
+  gap: 10px;
+  align-items:center;
+}
+
+@media (max-width: 800px){
+  .ruleRow{ grid-template-columns: 1fr; }
+}
+
+
+/* Modal */
+.modalOverlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  z-index: 50;
+}
+
+.modalCard{
+  width: min(1100px, 96vw);
+  max-height: 86vh;
+  overflow: auto;
+  background: var(--card);
+  border: 1px solid var(--cardBorder);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px;
+}
