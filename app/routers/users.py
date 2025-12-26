@@ -65,11 +65,7 @@ def search_users(
     if not needle:
         return []
 
-    stmt = (
-        select(User)
-        .where(func.lower(User.name).like(f"%{needle}%"))
-        .limit(20)
-    )
+    stmt = select(User).where(func.lower(User.name).like(f"%{needle}%")).limit(20)
     return session.exec(stmt).all()
 
 

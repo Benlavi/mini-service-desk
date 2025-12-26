@@ -17,7 +17,6 @@ app = FastAPI(
 )
 
 
-
 @app.on_event("startup")
 def on_startup():
     init_db()
@@ -32,7 +31,6 @@ app.include_router(comments.router, prefix="/api")
 @app.get("/")
 def read_root():
     return {"message": "Service Desk API is running!"}
-
 
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")

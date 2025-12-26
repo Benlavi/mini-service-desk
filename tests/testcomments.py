@@ -164,7 +164,9 @@ def test_comment_list_includes_author_names_for_multiple_users(client):
         headers=auth_header(helper_token),
     )
 
-    r = client.get(f"{BASE_TICKETS}/{ticket_id}/comments", headers=auth_header(helper_token))
+    r = client.get(
+        f"{BASE_TICKETS}/{ticket_id}/comments", headers=auth_header(helper_token)
+    )
     assert r.status_code == 200, r.text
     comments = r.json()
     assert [c["body"] for c in comments] == ["from owner", "from helper"]

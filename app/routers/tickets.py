@@ -48,7 +48,9 @@ def list_tickets(
     if current_user.is_admin:
         return session.exec(select(Ticket)).all()
 
-    return session.exec(select(Ticket).where(Ticket.created_by_id == current_user.id)).all()
+    return session.exec(
+        select(Ticket).where(Ticket.created_by_id == current_user.id)
+    ).all()
 
 
 @router.get("/{ticket_id}", response_model=TicketRead)
@@ -96,11 +98,15 @@ def patch_ticket(
     # ---- Backend rules to align with UI ----
     # 1) assigned requires operator_id
     if ticket.status == TicketStatus.assigned and ticket.operator_id is None:
-        raise HTTPException(status_code=400, detail="Assigned status requires an operator")
+        raise HTTPException(
+            status_code=400, detail="Assigned status requires an operator"
+        )
 
     # 2) new cannot have operator_id
     if ticket.status == TicketStatus.new and ticket.operator_id is not None:
-        raise HTTPException(status_code=400, detail="New status cannot have an operator assigned")
+        raise HTTPException(
+            status_code=400, detail="New status cannot have an operator assigned"
+        )
 
     # 3) Auto-status: when operator becomes set, new -> assigned (unless admin explicitly set pending/closed)
     operator_became_set = prev_operator_id is None and ticket.operator_id is not None
