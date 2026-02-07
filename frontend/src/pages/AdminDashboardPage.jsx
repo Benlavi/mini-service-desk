@@ -2,65 +2,33 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { apiFetch } from "../api/client.js";
 import { useAuth } from "../auth/AuthContext.jsx";
-import Shell from "../components/shell.jsx";
+import Layout from "../components/Layout.jsx";
 import AdvancedFilterModal, { evaluateAdvanced } from "../components/AdvancedFilterModal.jsx";
-
-const STATUS = ["new", "assigned", "pending", "closed"];
-
-function truncateText(text, max = 30) {
-  if (!text) return "";
-  return text.length > max ? `${text.slice(0, max)}…` : text;
-}
-
-function compare(a, b) {
-  if (a == null && b == null) return 0;
-  if (a == null) return -1;
-  if (b == null) return 1;
-  if (typeof a === "number" && typeof b === "number") return a - b;
-  return String(a).localeCompare(String(b));
-}
-
-function getStatusColor(status) {
-  switch (status) {
-    case "new": return "#00d4ff";
-    case "assigned": return "#7c5cff";
-    case "pending": return "#f59e0b";
-    case "closed": return "#22c55e";
-    default: return "#7c5cff";
-  }
-}
-
-function getUrgencyColor(urgency) {
-  switch (urgency) {
-    case "high": return "#ef4444";
-    case "normal": return "#f59e0b";
-    case "low": return "#22c55e";
-    default: return "#7c5cff";
-  }
-}
+import { Badge } from "../components/ui";
+import { truncateText, compare, ALL_STATUSES } from "../utils";
 
 export default function AdminDashboardPage() {
   const { token, logout } = useAuth();
   const navigate = useNavigate();
 
   const [tickets, setTickets] = useState([]);
-  const [operators, setOperators] = useState([]); // admins/operators list
-  const [userById, setUserById] = useState({}); // submitters + fallback lookup
+  const [operators, setOperators] = useState([]);
+  const [userById, setUserById] = useState({});
 
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
 
-  // quick filters
+  // Filters
   const [statusFilter, setStatusFilter] = useState("all");
   const [q, setQ] = useState("");
 
-  // advanced filters
+  // Advanced filters
   const [advOpen, setAdvOpen] = useState(false);
   const [adv, setAdv] = useState(null);
 
-  // table controls
+  // Table controls
   const [sortKey, setSortKey] = useState("id");
-  const [sortDir, setSortDir] = useState("desc"); // asc/desc
+  const [sortDir, setSortDir] = useState("desc");
   const [selected, setSelected] = useState(() => new Set());
   const [page, setPage] = useState(1);
   const pageSize = 12;
@@ -88,14 +56,12 @@ export default function AdminDashboardPage() {
       setTickets(tix);
       setOperators(ops);
 
-      // Fetch submitter/operator users by ID so we can show NAMES in table & filters
       const ids = new Set();
       for (const t of tix) {
         if (t.created_by_id != null) ids.add(t.created_by_id);
         if (t.operator_id != null) ids.add(t.operator_id);
       }
 
-      // avoid refetching what we already have
       const missing = [...ids].filter((id) => userById[id] == null);
 
       if (missing.length) {
@@ -231,173 +197,127 @@ export default function AdminDashboardPage() {
     return sortDir === "asc" ? "↑" : "↓";
   }
 
-  function setQuickFilter(filter) {
-    if (filter === "high") {
-      setStatusFilter("all");
-      setQ("");
-      // Use advanced filter for high priority
-    } else if (filter === "unassigned") {
-      setStatusFilter("new");
-      setQ("");
-    } else {
-      setStatusFilter(filter);
-      setQ("");
-    }
+  function filterByStatus(status) {
+    setStatusFilter(status);
+    setQ("");
   }
 
   return (
     <>
-      <Shell title="Admin Dashboard" subtitle="Manage all tickets across the system">
+      <Layout title="Admin Dashboard" subtitle="Manage all tickets across the system">
         {/* ========== STATISTICS CARDS ========== */}
-        <div className="statsGrid">
-          <div 
-            className="statCard" 
-            style={{ "--stat-accent": "linear-gradient(135deg, #7c5cff, #00d4ff)" }}
+        <div className="stats-grid">
+          <div
+            className="stat-card"
+            style={{ "--stat-color": "var(--accent-primary)" }}
           >
-            <div className="statIcon">📊</div>
-            <div className="statValue">{stats.total}</div>
-            <div className="statLabel">Total Tickets</div>
-            <div className="statSubtext">All time</div>
+            <div className="stat-value">{stats.total}</div>
+            <div className="stat-label">Total Tickets</div>
+            <div className="stat-subtext">All time</div>
           </div>
 
-          <div 
-            className="statCard"
-            style={{ "--stat-accent": "#00d4ff", "--stat-glow": "rgba(0, 212, 255, 0.2)" }}
+          <div
+            className="stat-card"
+            style={{ "--stat-color": "var(--status-new)" }}
           >
-            <div className="statIcon">📥</div>
-            <div className="statValue">{stats.open}</div>
-            <div className="statLabel">Open Tickets</div>
-            <div className="statSubtext">Needs attention</div>
+            <div className="stat-value">{stats.open}</div>
+            <div className="stat-label">Open Tickets</div>
+            <div className="stat-subtext">Needs attention</div>
           </div>
 
-          <div 
-            className="statCard"
-            style={{ "--stat-accent": "#ef4444", "--stat-glow": "rgba(239, 68, 68, 0.2)" }}
+          <div
+            className="stat-card"
+            style={{ "--stat-color": "var(--urgency-high)" }}
           >
-            <div className="statIcon">🔥</div>
-            <div className="statValue">{stats.highPriority}</div>
-            <div className="statLabel">High Priority</div>
-            <div className="statSubtext">Urgent</div>
+            <div className="stat-value">{stats.highPriority}</div>
+            <div className="stat-label">High Priority</div>
+            <div className="stat-subtext">Urgent</div>
           </div>
 
-          <div 
-            className="statCard"
-            style={{ "--stat-accent": "#22c55e", "--stat-glow": "rgba(34, 197, 94, 0.2)" }}
+          <div
+            className="stat-card"
+            style={{ "--stat-color": "var(--status-closed)" }}
           >
-            <div className="statIcon">✅</div>
-            <div className="statValue">{stats.byStatus.closed}</div>
-            <div className="statLabel">Closed</div>
-            <div className="statSubtext">Resolved</div>
+            <div className="stat-value">{stats.byStatus.closed}</div>
+            <div className="stat-label">Closed</div>
+            <div className="stat-subtext">Resolved</div>
           </div>
         </div>
 
         {/* ========== STATUS DISTRIBUTION ========== */}
-        <section className="card" style={{ marginBottom: "24px" }}>
-          <h3 className="cardTitle" style={{ marginBottom: "8px" }}>📈 Status Distribution</h3>
-          
-          <div className="statusBar">
+        <section className="card mb-xl">
+          <h3 className="card-title mb-sm">Status Distribution</h3>
+
+          <div className="status-bar">
             {stats.total > 0 && (
               <>
-                <div 
-                  className="segment" 
-                  style={{ 
-                    width: `${(stats.byStatus.new / stats.total) * 100}%`, 
-                    background: "#00d4ff" 
-                  }} 
+                <div
+                  className="segment"
+                  style={{
+                    width: `${(stats.byStatus.new / stats.total) * 100}%`,
+                    background: "var(--status-new)"
+                  }}
                 />
-                <div 
-                  className="segment" 
-                  style={{ 
-                    width: `${(stats.byStatus.assigned / stats.total) * 100}%`, 
-                    background: "#7c5cff" 
-                  }} 
+                <div
+                  className="segment"
+                  style={{
+                    width: `${(stats.byStatus.assigned / stats.total) * 100}%`,
+                    background: "var(--status-assigned)"
+                  }}
                 />
-                <div 
-                  className="segment" 
-                  style={{ 
-                    width: `${(stats.byStatus.pending / stats.total) * 100}%`, 
-                    background: "#f59e0b" 
-                  }} 
+                <div
+                  className="segment"
+                  style={{
+                    width: `${(stats.byStatus.pending / stats.total) * 100}%`,
+                    background: "var(--status-pending)"
+                  }}
                 />
-                <div 
-                  className="segment" 
-                  style={{ 
-                    width: `${(stats.byStatus.closed / stats.total) * 100}%`, 
-                    background: "#22c55e" 
-                  }} 
+                <div
+                  className="segment"
+                  style={{
+                    width: `${(stats.byStatus.closed / stats.total) * 100}%`,
+                    background: "var(--status-closed)"
+                  }}
                 />
               </>
             )}
           </div>
 
-          <div className="statusLegend">
-            <div className="legendItem">
-              <span className="legendDot" style={{ background: "#00d4ff" }} />
+          <div className="status-legend">
+            <div className="legend-item" onClick={() => filterByStatus("new")}>
+              <span className="legend-dot" style={{ background: "var(--status-new)" }} />
               <span>New <b>{stats.byStatus.new}</b></span>
             </div>
-            <div className="legendItem">
-              <span className="legendDot" style={{ background: "#7c5cff" }} />
+            <div className="legend-item" onClick={() => filterByStatus("assigned")}>
+              <span className="legend-dot" style={{ background: "var(--status-assigned)" }} />
               <span>Assigned <b>{stats.byStatus.assigned}</b></span>
             </div>
-            <div className="legendItem">
-              <span className="legendDot" style={{ background: "#f59e0b" }} />
+            <div className="legend-item" onClick={() => filterByStatus("pending")}>
+              <span className="legend-dot" style={{ background: "var(--status-pending)" }} />
               <span>Pending <b>{stats.byStatus.pending}</b></span>
             </div>
-            <div className="legendItem">
-              <span className="legendDot" style={{ background: "#22c55e" }} />
+            <div className="legend-item" onClick={() => filterByStatus("closed")}>
+              <span className="legend-dot" style={{ background: "var(--status-closed)" }} />
               <span>Closed <b>{stats.byStatus.closed}</b></span>
             </div>
           </div>
         </section>
 
-        {/* ========== QUICK ACTIONS ========== */}
-        <div className="quickActions">
-          <button 
-            className={`btn ghost ${statusFilter === "all" ? "active" : ""}`}
-            onClick={() => setQuickFilter("all")}
-          >
-            📋 All Tickets
-          </button>
-          <button 
-            className={`btn ghost ${statusFilter === "new" ? "active" : ""}`}
-            onClick={() => setQuickFilter("new")}
-          >
-            🆕 New ({stats.byStatus.new})
-          </button>
-          <button 
-            className={`btn ghost ${statusFilter === "assigned" ? "active" : ""}`}
-            onClick={() => setQuickFilter("assigned")}
-          >
-            👤 Assigned ({stats.byStatus.assigned})
-          </button>
-          <button 
-            className={`btn ghost ${statusFilter === "pending" ? "active" : ""}`}
-            onClick={() => setQuickFilter("pending")}
-          >
-            ⏳ Pending ({stats.byStatus.pending})
-          </button>
-          <button 
-            className={`btn ghost ${statusFilter === "closed" ? "active" : ""}`}
-            onClick={() => setQuickFilter("closed")}
-          >
-            ✅ Closed ({stats.byStatus.closed})
-          </button>
-        </div>
-
-        <div className="toolbarRow" style={{ marginBottom: "16px" }}>
+        {/* ========== FILTER BAR ========== */}
+        <div className="filter-bar">
           <button className="btn ghost" onClick={loadTickets}>
-            🔄 Refresh
+            Refresh
           </button>
           <button className="btn ghost" onClick={() => setAdvOpen(true)}>
-            🔍 Advanced Filter
+            Advanced Filter
           </button>
         </div>
 
         {err && <div className="error">{err}</div>}
 
-        <section className="card" style={{ marginBottom: "16px" }}>
-          <div className="toolbarRow">
-            <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+        <section className="card mb-lg">
+          <div className="toolbar-row">
+            <div className="flex items-center gap-md">
               <label className="label" style={{ margin: 0 }}>Status</label>
               <select
                 className="select"
@@ -406,7 +326,7 @@ export default function AdminDashboardPage() {
                 onChange={(e) => setStatusFilter(e.target.value)}
               >
                 <option value="all">All Statuses</option>
-                {STATUS.map((s) => (
+                {ALL_STATUSES.map((s) => (
                   <option key={s} value={s}>
                     {s}
                   </option>
@@ -417,13 +337,13 @@ export default function AdminDashboardPage() {
             <input
               className="input"
               style={{ flex: "1 1 280px" }}
-              placeholder="🔍 Search: id, submitter, description, category..."
+              placeholder="Search: id, submitter, description, category..."
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
           </div>
 
-          <div className="pillRow">
+          <div className="pill-row" style={{ marginTop: "var(--space-3)" }}>
             <span className="pill">
               <b>Total:</b> {tickets.length}
             </span>
@@ -436,8 +356,8 @@ export default function AdminDashboardPage() {
             <span
               className="pill"
               style={{
-                borderColor: adv ? "#7c5cff" : undefined,
-                color: adv ? "#7c5cff" : undefined,
+                borderColor: adv ? "var(--accent-primary)" : undefined,
+                color: adv ? "var(--accent-primary)" : undefined,
               }}
             >
               <b>Filter:</b> {adv ? "ON" : "OFF"}
@@ -446,11 +366,11 @@ export default function AdminDashboardPage() {
         </section>
 
         <section className="card">
-          <div className="tableWrap" style={{ maxHeight: "500px", overflowY: "auto" }}>
+          <div className="table-wrapper" style={{ maxHeight: "500px", overflowY: "auto" }}>
             <table className="table">
               <thead>
                 <tr>
-                  <th className="th" style={{ width: 44 }}>
+                  <th style={{ width: 44 }}>
                     <input
                       className="checkbox"
                       type="checkbox"
@@ -459,49 +379,49 @@ export default function AdminDashboardPage() {
                     />
                   </th>
 
-                  <th className="th">
-                    <button className="thBtn" onClick={() => toggleSort("id")}>
-                      # <span className="sortIcon">{sortIcon("id")}</span>
+                  <th>
+                    <button className="th-btn" onClick={() => toggleSort("id")}>
+                      # <span className="sort-icon">{sortIcon("id")}</span>
                     </button>
                   </th>
 
-                  <th className="th">
-                    <button className="thBtn" onClick={() => toggleSort("status")}>
-                      Status <span className="sortIcon">{sortIcon("status")}</span>
+                  <th>
+                    <button className="th-btn" onClick={() => toggleSort("status")}>
+                      Status <span className="sort-icon">{sortIcon("status")}</span>
                     </button>
                   </th>
 
-                  <th className="th">
-                    <button className="thBtn" onClick={() => toggleSort("created_by_id")}>
-                      Submitter <span className="sortIcon">{sortIcon("created_by_id")}</span>
+                  <th>
+                    <button className="th-btn" onClick={() => toggleSort("created_by_id")}>
+                      Submitter <span className="sort-icon">{sortIcon("created_by_id")}</span>
                     </button>
                   </th>
 
-                  <th className="th">
-                    <button className="thBtn" onClick={() => toggleSort("description")}>
-                      Description <span className="sortIcon">{sortIcon("description")}</span>
+                  <th className="col-hide-mobile">
+                    <button className="th-btn" onClick={() => toggleSort("description")}>
+                      Description <span className="sort-icon">{sortIcon("description")}</span>
                     </button>
                   </th>
 
-                  <th className="th">
-                    <button className="thBtn" onClick={() => toggleSort("request_type")}>
-                      Category <span className="sortIcon">{sortIcon("request_type")}</span>
+                  <th className="col-hide-mobile">
+                    <button className="th-btn" onClick={() => toggleSort("request_type")}>
+                      Category <span className="sort-icon">{sortIcon("request_type")}</span>
                     </button>
                   </th>
 
-                  <th className="th">
-                    <button className="thBtn" onClick={() => toggleSort("operator_id")}>
-                      Assigned <span className="sortIcon">{sortIcon("operator_id")}</span>
+                  <th className="col-hide-mobile">
+                    <button className="th-btn" onClick={() => toggleSort("operator_id")}>
+                      Assigned <span className="sort-icon">{sortIcon("operator_id")}</span>
                     </button>
                   </th>
 
-                  <th className="th">
-                    <button className="thBtn" onClick={() => toggleSort("urgency")}>
-                      Urgency <span className="sortIcon">{sortIcon("urgency")}</span>
+                  <th>
+                    <button className="th-btn" onClick={() => toggleSort("urgency")}>
+                      Urgency <span className="sort-icon">{sortIcon("urgency")}</span>
                     </button>
                   </th>
 
-                  <th className="th" style={{ width: 100 }}>
+                  <th style={{ width: 100 }}>
                     Action
                   </th>
                 </tr>
@@ -509,24 +429,24 @@ export default function AdminDashboardPage() {
 
               <tbody>
                 {loading ? (
-                  <tr className="tr">
-                    <td className="td" colSpan={9}>
+                  <tr>
+                    <td colSpan={9}>
                       <div className="meta loading">Loading tickets...</div>
                     </td>
                   </tr>
                 ) : pageRows.length === 0 ? (
-                  <tr className="tr">
-                    <td className="td" colSpan={9}>
+                  <tr>
+                    <td colSpan={9}>
                       <div className="meta">No matching tickets found.</div>
                     </td>
                   </tr>
                 ) : (
                   pageRows.map((t) => (
-                    <tr 
-                      key={t.id} 
-                      className={`tr ${t.urgency === "high" ? "highPriority" : ""}`}
+                    <tr
+                      key={t.id}
+                      className={`${t.urgency === "high" ? "high-priority" : ""} ${selected.has(t.id) ? "selected" : ""}`}
                     >
-                      <td className="td">
+                      <td>
                         <input
                           className="checkbox"
                           type="checkbox"
@@ -535,40 +455,25 @@ export default function AdminDashboardPage() {
                         />
                       </td>
 
-                      <td className="td">
-                        <b style={{ color: "#7c5cff" }}>#{t.id}</b>
+                      <td>
+                        <b style={{ color: "var(--accent-primary)", fontFamily: "var(--font-mono)" }}>#{t.id}</b>
                       </td>
-                      <td className="td">
-                        <span
-                          className="badge"
-                          style={{
-                            borderColor: getStatusColor(t.status),
-                            color: getStatusColor(t.status),
-                          }}
-                        >
-                          {t.status}
-                        </span>
+                      <td>
+                        <Badge status={t.status}>{t.status}</Badge>
                       </td>
-                      <td className="td">{nameForUserId(t.created_by_id)}</td>
-                      <td className="td" title={t.description ?? ""}>
+                      <td>{nameForUserId(t.created_by_id)}</td>
+                      <td className="col-hide-mobile" title={t.description ?? ""}>
                         {truncateText(t.description, 30)}
                       </td>
-                      <td className="td">{t.request_type}</td>
-                      <td className="td">{nameForOperatorId(t.operator_id)}</td>
-                      <td className="td">
-                        <span
-                          style={{
-                            color: getUrgencyColor(t.urgency),
-                            fontWeight: 600,
-                          }}
-                        >
-                          {t.urgency}
-                        </span>
+                      <td className="col-hide-mobile">{t.request_type}</td>
+                      <td className="col-hide-mobile">{nameForOperatorId(t.operator_id)}</td>
+                      <td>
+                        <Badge urgency={t.urgency}>{t.urgency}</Badge>
                       </td>
 
-                      <td className="td">
-                        <Link className="btn ghost" to={`/admin/tickets/${t.id}`}>
-                          Open →
+                      <td>
+                        <Link className="btn ghost sm" to={`/admin/tickets/${t.id}`}>
+                          Open
                         </Link>
                       </td>
                     </tr>
@@ -578,30 +483,30 @@ export default function AdminDashboardPage() {
             </table>
           </div>
 
-          <div className="toolbarRow" style={{ marginTop: "16px", justifyContent: "space-between" }}>
+          <div className="toolbar-row" style={{ marginTop: "var(--space-4)", justifyContent: "space-between" }}>
             <div className="meta">
               Page <b>{pageSafe}</b> of <b>{totalPages}</b>
             </div>
 
-            <div style={{ display: "flex", gap: "8px" }}>
+            <div className="flex gap-sm">
               <button
                 className="btn ghost"
                 disabled={pageSafe <= 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
               >
-                ← Prev
+                Previous
               </button>
               <button
                 className="btn ghost"
                 disabled={pageSafe >= totalPages}
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               >
-                Next →
+                Next
               </button>
             </div>
           </div>
         </section>
-      </Shell>
+      </Layout>
 
       <AdvancedFilterModal
         open={advOpen}

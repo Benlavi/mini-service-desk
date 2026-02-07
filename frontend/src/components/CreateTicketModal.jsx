@@ -52,75 +52,80 @@ export default function CreateTicketModal({ open, onClose, onTicketCreated }) {
   if (!open) return null;
 
   return (
-    <div className="modalOverlay" onClick={handleClose}>
-      <div 
-        className="modalCard" 
+    <div className="modal-overlay" onClick={handleClose}>
+      <div
+        className="modal"
         onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: 500 }}
       >
-        <div className="modalHead">
-          <h2 style={{ margin: 0 }}>📝 Create New Ticket</h2>
-          <button className="btn ghost" onClick={handleClose}>✕</button>
+        <div className="modal-header">
+          <h2 className="modal-title">Create New Ticket</h2>
+          <button className="modal-close" onClick={handleClose}>×</button>
         </div>
 
-        {error && <div className="error" style={{ margin: "0 16px" }}>{error}</div>}
+        {error && <div className="error" style={{ margin: "var(--space-4) var(--space-6) 0" }}>{error}</div>}
 
-        <form onSubmit={handleSubmit} style={{ padding: "16px" }}>
-          <div style={{ marginBottom: "16px" }}>
-            <label className="label">Description</label>
-            <textarea
-              className="textarea"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={4}
-              placeholder="Describe your issue or request in detail..."
-              autoFocus
-            />
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
-            <div>
-              <label className="label">Category</label>
-              <select
-                className="select"
-                value={requestType}
-                onChange={(e) => setRequestType(e.target.value)}
-              >
-                <option value="software">💻 Software</option>
-                <option value="hardware">🖥️ Hardware</option>
-                <option value="environment">🏢 Environment</option>
-                <option value="logistics">📦 Logistics</option>
-                <option value="other">📋 Other</option>
-              </select>
+        <div className="modal-body">
+          <form onSubmit={handleSubmit} className="form">
+            <div className="form-group">
+              <label className="label">Description</label>
+              <textarea
+                className="textarea"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={4}
+                placeholder="Describe your issue or request in detail..."
+                autoFocus
+              />
+              <span className="text-sm text-muted">
+                {description.length} characters
+              </span>
             </div>
 
-            <div>
-              <label className="label">Urgency</label>
-              <select
-                className="select"
-                value={urgency}
-                onChange={(e) => setUrgency(e.target.value)}
-              >
-                <option value="low">🟢 Low</option>
-                <option value="normal">🟡 Normal</option>
-                <option value="high">🔴 High</option>
-              </select>
-            </div>
-          </div>
+            <div className="form-grid-2">
+              <div className="form-group">
+                <label className="label">Category</label>
+                <select
+                  className="select"
+                  value={requestType}
+                  onChange={(e) => setRequestType(e.target.value)}
+                >
+                  <option value="software">Software</option>
+                  <option value="hardware">Hardware</option>
+                  <option value="environment">Environment</option>
+                  <option value="logistics">Logistics</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
 
-          <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
-            <button type="button" className="btn ghost" onClick={handleClose}>
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="btn primary"
-              disabled={!description.trim() || submitting}
-            >
-              {submitting ? "Creating..." : "➕ Create Ticket"}
-            </button>
-          </div>
-        </form>
+              <div className="form-group">
+                <label className="label">Urgency</label>
+                <select
+                  className="select"
+                  value={urgency}
+                  onChange={(e) => setUrgency(e.target.value)}
+                >
+                  <option value="low">Low</option>
+                  <option value="normal">Normal</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <div className="modal-footer">
+          <button type="button" className="btn" onClick={handleClose}>
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="btn primary"
+            disabled={!description.trim() || submitting}
+            onClick={handleSubmit}
+          >
+            {submitting ? "Creating..." : "Create Ticket"}
+          </button>
+        </div>
       </div>
     </div>
   );

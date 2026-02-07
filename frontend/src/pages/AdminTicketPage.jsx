@@ -2,26 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { apiFetch } from "../api/client.js";
 import { useAuth } from "../auth/AuthContext.jsx";
-import Shell from "../components/shell.jsx";
-
-function getStatusColor(status) {
-  switch (status) {
-    case "new": return "#00d4ff";
-    case "assigned": return "#7c5cff";
-    case "pending": return "#f59e0b";
-    case "closed": return "#22c55e";
-    default: return "#7c5cff";
-  }
-}
-
-function getUrgencyColor(urgency) {
-  switch (urgency) {
-    case "high": return "#ef4444";
-    case "normal": return "#f59e0b";
-    case "low": return "#22c55e";
-    default: return "#7c5cff";
-  }
-}
+import Layout from "../components/Layout.jsx";
+import { Badge, Avatar } from "../components/ui";
+import { truncateText, formatDate } from "../utils";
 
 export default function AdminTicketPage() {
   const { id } = useParams();
@@ -159,171 +142,162 @@ export default function AdminTicketPage() {
 
   if (loading) {
     return (
-      <Shell title="Loading..." subtitle="">
+      <Layout title="Loading..." subtitle="">
         <div className="card">
           <div className="meta loading">Loading ticket details...</div>
         </div>
-      </Shell>
+      </Layout>
     );
   }
 
   if (err) {
     return (
-      <Shell title="Error" subtitle="">
+      <Layout title="Error" subtitle="">
         <div className="error">Error: {err}</div>
-        <Link className="navlink" to="/admin" style={{ marginTop: "16px", display: "inline-flex" }}>
-          ← Back to dashboard
-        </Link>
-      </Shell>
+        <div className="breadcrumb">
+          <Link to="/admin">Dashboard</Link>
+          <span className="breadcrumb-separator">/</span>
+          <span className="breadcrumb-current">Error</span>
+        </div>
+      </Layout>
     );
   }
 
   if (!ticket) {
     return (
-      <Shell title="Not Found" subtitle="">
+      <Layout title="Not Found" subtitle="">
         <div className="error">Ticket not found</div>
-      </Shell>
+      </Layout>
     );
   }
 
   return (
     <>
-      <Shell title={`Ticket #${ticket.id}`} subtitle={truncateText(ticket.description, 60)}>
-        <div style={{ marginBottom: "16px" }}>
-          <Link className="navlink" to="/admin">
-            ← Back to dashboard
-          </Link>
+      <Layout title={`Ticket #${ticket.id}`} subtitle={truncateText(ticket.description, 60)}>
+        <div className="breadcrumb">
+          <Link to="/admin">Dashboard</Link>
+          <span className="breadcrumb-separator">/</span>
+          <span className="breadcrumb-current">Ticket #{ticket.id}</span>
         </div>
 
-        <div className="grid">
+        <div className="grid-2">
           {/* Ticket Details & Edit */}
           <section className="card">
-            <h3 className="cardTitle">📝 Ticket Details</h3>
+            <h3 className="card-title mb-lg">Ticket Details</h3>
 
-            <div className="pillRow" style={{ marginBottom: "20px" }}>
-              <span
-                className="badge"
-                style={{
-                  borderColor: getStatusColor(ticket.status),
-                  color: getStatusColor(ticket.status),
-                }}
-              >
-                Status: {ticket.status}
-              </span>
-              <span
-                className="badge"
-                style={{
-                  borderColor: getUrgencyColor(ticket.urgency),
-                  color: getUrgencyColor(ticket.urgency),
-                }}
-              >
-                Urgency: {ticket.urgency}
-              </span>
-              <span className="badge">
-                Category: {ticket.request_type}
-              </span>
-              <span className="badge">
-                Assigned: {operatorLabel}
-              </span>
-              <span className="badge">
-                Created by: {submitterName}
-              </span>
+            <div className="ticket-detail-meta">
+              <div className="ticket-detail-meta-item">
+                <span className="ticket-detail-meta-label">Status</span>
+                <Badge status={ticket.status}>{ticket.status}</Badge>
+              </div>
+              <div className="ticket-detail-meta-item">
+                <span className="ticket-detail-meta-label">Urgency</span>
+                <Badge urgency={ticket.urgency}>{ticket.urgency}</Badge>
+              </div>
+              <div className="ticket-detail-meta-item">
+                <span className="ticket-detail-meta-label">Category</span>
+                <Badge>{ticket.request_type}</Badge>
+              </div>
+              <div className="ticket-detail-meta-item">
+                <span className="ticket-detail-meta-label">Assigned to</span>
+                <Badge>{operatorLabel}</Badge>
+              </div>
+              <div className="ticket-detail-meta-item">
+                <span className="ticket-detail-meta-label">Created by</span>
+                <Badge>{submitterName}</Badge>
+              </div>
             </div>
 
-            <div className="card solid" style={{ padding: "16px", marginBottom: "20px" }}>
+            <div className="ticket-description mb-xl">
               <div className="label">Description</div>
-              <div style={{ whiteSpace: "pre-wrap", marginTop: "8px", lineHeight: 1.7 }}>
+              <div className="ticket-description-text">
                 {ticket.description}
               </div>
             </div>
 
-            <form onSubmit={saveQuickEdit} className="form">
-              <div>
-                <label className="label">Status</label>
-                <select
-                  className="select"
-                  value={statusVal}
-                  onChange={(e) => onChangeStatus(e.target.value)}
-                >
-                  <option value="new">🆕 New</option>
-                  <option value="assigned">👤 Assigned</option>
-                  <option value="pending">⏳ Pending</option>
-                  <option value="closed">✅ Closed</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="label">Urgency</label>
-                <select
-                  className="select"
-                  value={urgencyVal}
-                  onChange={(e) => setUrgencyVal(e.target.value)}
-                >
-                  <option value="low">🟢 Low</option>
-                  <option value="normal">🟡 Normal</option>
-                  <option value="high">🔴 High</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="label">Assign to Operator</label>
-                <select
-                  className="select"
-                  value={operatorIdVal}
-                  onChange={(e) => onChangeOperator(e.target.value)}
-                >
-                  <option value="">— Unassigned —</option>
-                  {admins.map((a) => (
-                    <option key={a.id} value={String(a.id)}>
-                      {a.name}
-                    </option>
-                  ))}
-                </select>
-
-                {statusVal === "new" && (
-                  <div className="meta" style={{ marginTop: "8px" }}>
-                    💡 Assigning an operator will automatically move status to <b>assigned</b>.
+            <div className="ticket-edit-section">
+              <form onSubmit={saveQuickEdit} className="form">
+                <div className="form-grid-3">
+                  <div className="form-group">
+                    <label className="label">Status</label>
+                    <select
+                      className="select"
+                      value={statusVal}
+                      onChange={(e) => onChangeStatus(e.target.value)}
+                    >
+                      <option value="new">New</option>
+                      <option value="assigned">Assigned</option>
+                      <option value="pending">Pending</option>
+                      <option value="closed">Closed</option>
+                    </select>
                   </div>
-                )}
-              </div>
 
-              <button className="btn primary" disabled={saving}>
-                {saving ? "Saving..." : "💾 Save Changes"}
-              </button>
-            </form>
+                  <div className="form-group">
+                    <label className="label">Urgency</label>
+                    <select
+                      className="select"
+                      value={urgencyVal}
+                      onChange={(e) => setUrgencyVal(e.target.value)}
+                    >
+                      <option value="low">Low</option>
+                      <option value="normal">Normal</option>
+                      <option value="high">High</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="label">Operator</label>
+                    <select
+                      className="select"
+                      value={operatorIdVal}
+                      onChange={(e) => onChangeOperator(e.target.value)}
+                    >
+                      <option value="">— Unassigned —</option>
+                      {admins.map((a) => (
+                        <option key={a.id} value={String(a.id)}>
+                          {a.name}
+                        </option>
+                      ))}
+                    </select>
+
+                    {statusVal === "new" && (
+                      <div className="meta" style={{ marginTop: "var(--space-2)" }}>
+                        Note: Assigning an operator will automatically move status to <b>assigned</b>.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <button className="btn primary" disabled={saving}>
+                  {saving ? "Saving..." : "Save Changes"}
+                </button>
+              </form>
+            </div>
           </section>
 
           {/* Comments Section */}
           <section className="card">
-            <div className="spread" style={{ marginBottom: "16px" }}>
-              <h3 className="cardTitle" style={{ margin: 0 }}>💬 Comments</h3>
-              <span className="badge">{comments.length}</span>
+            <div className="spread mb-lg">
+              <h3 className="card-title">Comments</h3>
+              <Badge>{comments.length}</Badge>
             </div>
 
             {comments.length === 0 ? (
-              <div className="meta" style={{ marginBottom: "20px" }}>
+              <div className="meta mb-xl">
                 No comments yet. Be the first to add one!
               </div>
             ) : (
-              <ul className="commentList" style={{ marginBottom: "20px" }}>
-                {comments.map((c, index) => (
-                  <li
-                    key={c.id}
-                    className="commentListItem"
-                    style={{ animationDelay: `${index * 0.05}s` }}
-                  >
-                    <div
-                      className="meta"
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        marginBottom: "8px",
-                      }}
-                    >
-                      <span style={{ fontWeight: 600, color: "var(--accent-primary)" }}>
-                        {c.author_name ?? `User #${c.author_id}`}
-                      </span>
-                      <span>{new Date(c.created_at).toLocaleString()}</span>
+              <ul className="comment-list mb-xl">
+                {comments.map((c) => (
+                  <li key={c.id} className="comment-item">
+                    <div className="spread mb-sm">
+                      <div className="flex items-center gap-sm">
+                        <Avatar name={c.author_name} size="sm" />
+                        <span className="font-semibold" style={{ color: "var(--accent-primary)" }}>
+                          {c.author_name ?? `User #${c.author_id}`}
+                        </span>
+                      </div>
+                      <span className="text-sm text-muted">{formatDate(c.created_at)}</span>
                     </div>
                     <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
                       {c.body}
@@ -333,9 +307,9 @@ export default function AdminTicketPage() {
               </ul>
             )}
 
-            <form onSubmit={submitComment} className="form">
-              <div>
-                <label className="label">Add Admin Comment</label>
+            <form onSubmit={submitComment}>
+              <label className="label mb-sm">Add Admin Comment</label>
+              <div className="comment-composer">
                 <textarea
                   className="textarea"
                   value={newComment}
@@ -343,21 +317,16 @@ export default function AdminTicketPage() {
                   rows={4}
                   placeholder="Write your comment..."
                 />
-              </div>
-              <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                <button className="btn primary" disabled={!newComment}>
-                  💬 Add Comment
-                </button>
+                <div className="comment-composer-footer">
+                  <button className="btn primary" disabled={!newComment}>
+                    Add Comment
+                  </button>
+                </div>
               </div>
             </form>
           </section>
         </div>
-      </Shell>
+      </Layout>
     </>
   );
-}
-
-function truncateText(text, max = 60) {
-  if (!text) return "";
-  return text.length > max ? `${text.slice(0, max)}…` : text;
 }

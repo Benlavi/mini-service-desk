@@ -30,16 +30,6 @@ docker compose up --build
 
 ---
 
-## 🎬 Interactive Demo
-
-We've included a demo script that automatically sets up a user, logs in, creates a ticket, and tests the export feature:
-
-```bash
-./scripts/demo.sh
-```
-
----
-
 ## 🛠️ Manual Development Setup
 
 If you prefer to run the services individually without Docker:
@@ -52,7 +42,7 @@ source .venv/bin/activate
 uv sync
 
 # Initialize database & seed admin
-python scripts/seed_admin.py --email admin@example.com --password "SecurePass123!"
+python3 scripts/seed_admin.py --email admin@example.com --password "SecurePass123!"
 
 # Run server
 uv run uvicorn app.main:app --reload
@@ -99,9 +89,5 @@ pytest tests/test_refresh.py   # Async & Idempotency
 - `app/`: The core FastAPI application logic.
 - `frontend/`: React components and hooks for the user interface.
 - `scripts/`: Dev utilities including the admin seeder and demo script.
-- `docs/`: Technical notes on architecture, orchestration, and runbooks.
 
----
-
-Happy hacking! 🚀
 

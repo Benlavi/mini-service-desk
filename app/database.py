@@ -1,6 +1,12 @@
 import os
 from sqlmodel import SQLModel, Session, create_engine
 
+# Import all models to ensure tables are created
+from app.models.user import User  # noqa: F401
+from app.models.ticket import Ticket  # noqa: F401
+from app.models.comment import TicketComment  # noqa: F401
+
+
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///database.db")
 ENV = os.getenv("ENV", "dev")
 

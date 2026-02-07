@@ -196,20 +196,19 @@ export default function AdvancedFilterModal({ open, value, onClose, onApply, tok
   }
 
   return (
-    <div className="modalOverlay" onMouseDown={onClose}>
-      <div className="modalCard card" onMouseDown={(e) => e.stopPropagation()}>
-        <div className="toolbarRow" style={{ marginBottom: 12 }}>
-          <div style={{ fontWeight: 700 }}>Advanced filter</div>
-          <div style={{ flex: 1 }} />
-          <button className="btn ghost" onClick={clearAll}>
-            Clear
-          </button>
-          <button className="btn ghost" onClick={onClose}>
-            Close
-          </button>
+    <div className="modal-overlay" onMouseDown={onClose}>
+      <div className="modal" onMouseDown={(e) => e.stopPropagation()} style={{ maxWidth: 600 }}>
+        <div className="modal-header">
+          <h2 className="modal-title">Advanced Filter</h2>
+          <div className="flex gap-sm">
+            <button className="btn" onClick={clearAll}>
+              Clear
+            </button>
+            <button className="modal-close" onClick={onClose}>×</button>
+          </div>
         </div>
 
-        <div className="form" style={{ gap: 10 }}>
+        <div className="modal-body" style={{ paddingTop: 0 }}>
           {draft.rules.map((r, idx) => {
             const fieldMeta = getFieldMeta(r.field ?? "status");
             const ops = OP_BY_TYPE[fieldMeta.type] ?? OP_BY_TYPE.text;
@@ -217,9 +216,9 @@ export default function AdvancedFilterModal({ open, value, onClose, onApply, tok
             const showValue = !(fieldMeta.type === "operator" && (r.op === "is_empty" || r.op === "is_not_empty"));
 
             return (
-              <div key={idx} className="card" style={{ padding: 12 }}>
+              <div key={idx} className="filter-rule-card">
                 {idx > 0 && (
-                  <div style={{ marginBottom: 10, display: "flex", gap: 10, alignItems: "center" }}>
+                  <div className="filter-rule-join">
                     <div className="label" style={{ minWidth: 44 }}>
                       Join
                     </div>
@@ -235,7 +234,7 @@ export default function AdvancedFilterModal({ open, value, onClose, onApply, tok
                   </div>
                 )}
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div className="filter-rule-grid">
                   <div>
                     <div className="label">Field</div>
                     <select
@@ -277,7 +276,7 @@ export default function AdvancedFilterModal({ open, value, onClose, onApply, tok
                     </select>
                   </div>
 
-                  <div style={{ gridColumn: "1 / -1" }}>
+                  <div className="full-width">
                     <div className="label">Value</div>
 
                     {!showValue ? (
@@ -337,8 +336,8 @@ export default function AdvancedFilterModal({ open, value, onClose, onApply, tok
                   </div>
                 </div>
 
-                <div className="toolbarRow" style={{ marginTop: 10, justifyContent: "flex-end" }}>
-                  <button className="btn danger" onClick={() => removeRule(idx)}>
+                <div className="filter-rule-actions">
+                  <button className="btn danger sm" onClick={() => removeRule(idx)}>
                     Remove
                   </button>
                 </div>
@@ -346,15 +345,18 @@ export default function AdvancedFilterModal({ open, value, onClose, onApply, tok
             );
           })}
 
-          <div className="toolbarRow">
-            <button className="btn ghost" onClick={addRule}>
+          <div className="toolbar-row">
+            <button className="btn" onClick={addRule}>
               + Add rule
             </button>
             <div style={{ flex: 1 }} />
-            <button className="btn primary" onClick={apply}>
-              Apply
-            </button>
           </div>
+        </div>
+
+        <div className="modal-footer">
+          <button className="btn primary" onClick={apply}>
+            Apply Filter
+          </button>
         </div>
       </div>
     </div>

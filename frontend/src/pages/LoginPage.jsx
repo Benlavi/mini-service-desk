@@ -41,20 +41,36 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="authContainer">
-      <div className="authCard">
-        <div style={{ textAlign: "center", marginBottom: "32px" }}>
-          <h1 className="h1">Welcome back</h1>
-          <p className="h2">Sign in to manage your tickets</p>
-        </div>
+    <div className="auth-page split-screen">
+      {/* Brand Panel - hidden on mobile */}
+      <div className="auth-brand-panel">
+        <h1 className="auth-brand-title">Streamline your IT support</h1>
+        <p className="auth-brand-description">
+          A modern service desk built for teams that value speed, clarity, and collaboration.
+        </p>
+        <ul className="auth-brand-features">
+          <li>AI-powered ticket creation</li>
+          <li>Real-time status tracking</li>
+          <li>Team assignment & collaboration</li>
+          <li>Advanced filtering & search</li>
+        </ul>
+      </div>
 
-        {err && <div className="error">{err}</div>}
+      {/* Form Panel */}
+      <div className="auth-form-panel">
+        <div className="auth-card">
+          <div className="auth-logo">
+            <div className="auth-logo-icon">SD</div>
+            <span className="auth-logo-text">Service Desk</span>
+          </div>
 
-        <section className="card">
-          <h3 className="cardTitle">Login</h3>
+          <h1 className="auth-title">Welcome back</h1>
+          <p className="auth-subtitle">Sign in to manage your tickets</p>
+
+          {err && <div className="error">{err}</div>}
 
           <form onSubmit={onSubmit} className="form">
-            <div>
+            <div className="form-group">
               <label className="label">Email</label>
               <input
                 className="input"
@@ -66,7 +82,7 @@ export default function LoginPage() {
               />
             </div>
 
-            <div>
+            <div className="form-group">
               <label className="label">Password</label>
               <input
                 className="input"
@@ -79,19 +95,18 @@ export default function LoginPage() {
             </div>
 
             <button
-              className="btn primary"
-              style={{ width: "100%", padding: "14px" }}
+              className="btn primary lg w-full"
               disabled={loading || !email || !password}
             >
               {loading ? "Signing in..." : "Sign In"}
             </button>
-
-            <div className="meta" style={{ justifyContent: "center" }}>
-              Don't have an account?{" "}
-              <Link to="/register">Create one</Link>
-            </div>
           </form>
-        </section>
+
+          <div className="auth-footer">
+            Don't have an account?{" "}
+            <Link to="/register">Create one</Link>
+          </div>
+        </div>
       </div>
     </div>
   );

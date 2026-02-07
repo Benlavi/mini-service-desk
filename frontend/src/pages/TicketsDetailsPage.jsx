@@ -1,32 +1,14 @@
 import { useEffect, useState } from "react";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { apiFetch } from "../api/client.js";
 import { useAuth } from "../auth/AuthContext.jsx";
-import Shell from "../components/shell.jsx";
-
-function getStatusColor(status) {
-  switch (status) {
-    case "new": return "#00d4ff";
-    case "assigned": return "#7c5cff";
-    case "pending": return "#f59e0b";
-    case "closed": return "#22c55e";
-    default: return "#7c5cff";
-  }
-}
-
-function getUrgencyColor(urgency) {
-  switch (urgency) {
-    case "high": return "#ef4444";
-    case "normal": return "#f59e0b";
-    case "low": return "#22c55e";
-    default: return "#7c5cff";
-  }
-}
+import Layout from "../components/Layout.jsx";
+import { Badge, Avatar } from "../components/ui";
+import { truncateText, formatDate } from "../utils";
 
 export default function TicketsDetailsPage() {
   const { id } = useParams();
-  const { token, logout } = useAuth();
-  const navigate = useNavigate();
+  const { token } = useAuth();
 
   const [ticket, setTicket] = useState(null);
   const [comments, setComments] = useState([]);
@@ -69,11 +51,6 @@ export default function TicketsDetailsPage() {
     }
   }
 
-  function onLogout() {
-    logout();
-    navigate("/login");
-  }
-
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -81,76 +58,66 @@ export default function TicketsDetailsPage() {
 
   if (loading) {
     return (
-      <Shell title="Loading..." subtitle="">
+      <Layout title="Loading..." subtitle="">
         <div className="card">
           <div className="meta loading">Loading ticket details...</div>
         </div>
-      </Shell>
+      </Layout>
     );
   }
 
   if (err) {
     return (
-      <Shell title="Error" subtitle="">
+      <Layout title="Error" subtitle="">
         <div className="error">Error: {err}</div>
-        <Link className="navlink" to="/tickets" style={{ marginTop: "16px", display: "inline-flex" }}>
-          ← Back to tickets
-        </Link>
-      </Shell>
+        <div className="breadcrumb">
+          <Link to="/tickets">Tickets</Link>
+          <span className="breadcrumb-separator">/</span>
+          <span className="breadcrumb-current">Error</span>
+        </div>
+      </Layout>
     );
   }
 
   if (!ticket) {
     return (
-      <Shell title="Not Found" subtitle="">
+      <Layout title="Not Found" subtitle="">
         <div className="error">Ticket not found</div>
-      </Shell>
+      </Layout>
     );
   }
 
   return (
-    <Shell title={`Ticket #${ticket.id}`} subtitle={truncateText(ticket.description, 60)}>
-      <div style={{ marginBottom: "16px" }}>
-        <Link className="navlink" to="/tickets">
-          ← Back to tickets
-        </Link>
+    <Layout title={`Ticket #${ticket.id}`} subtitle={truncateText(ticket.description, 60)}>
+      <div className="breadcrumb">
+        <Link to="/tickets">Tickets</Link>
+        <span className="breadcrumb-separator">/</span>
+        <span className="breadcrumb-current">#{ticket.id}</span>
       </div>
 
-      <div className="grid">
+      <div className="grid-2">
         {/* Ticket Details Card */}
         <section className="card">
-          <h2 style={{ marginBottom: "16px" }}>📄 Ticket Details</h2>
+          <h2 className="card-title mb-lg">Ticket Details</h2>
 
-          <div className="pillRow" style={{ marginBottom: "20px" }}>
-            <span
-              className="badge"
-              style={{
-                borderColor: getStatusColor(ticket.status),
-                color: getStatusColor(ticket.status),
-              }}
-            >
-              Status: {ticket.status}
-            </span>
-            <span
-              className="badge"
-              style={{
-                borderColor: getUrgencyColor(ticket.urgency),
-                color: getUrgencyColor(ticket.urgency),
-              }}
-            >
-              Urgency: {ticket.urgency}
-            </span>
-            <span className="badge">
-              Category: {ticket.request_type}
-            </span>
+          <div className="ticket-detail-meta">
+            <div className="ticket-detail-meta-item">
+              <span className="ticket-detail-meta-label">Status</span>
+              <Badge status={ticket.status}>{ticket.status}</Badge>
+            </div>
+            <div className="ticket-detail-meta-item">
+              <span className="ticket-detail-meta-label">Urgency</span>
+              <Badge urgency={ticket.urgency}>{ticket.urgency}</Badge>
+            </div>
+            <div className="ticket-detail-meta-item">
+              <span className="ticket-detail-meta-label">Category</span>
+              <Badge>{ticket.request_type}</Badge>
+            </div>
           </div>
 
-          <div
-            className="card solid"
-            style={{ padding: "16px" }}
-          >
+          <div className="ticket-description">
             <div className="label">Description</div>
-            <div style={{ whiteSpace: "pre-wrap", marginTop: "8px", lineHeight: 1.7 }}>
+            <div className="ticket-description-text">
               {ticket.description}
             </div>
           </div>
@@ -158,35 +125,27 @@ export default function TicketsDetailsPage() {
 
         {/* Comments Card */}
         <section className="card">
-          <div className="spread" style={{ marginBottom: "16px" }}>
-            <h2 style={{ margin: 0 }}>💬 Comments</h2>
-            <span className="badge">{comments.length}</span>
+          <div className="spread mb-lg">
+            <h2 className="card-title">Comments</h2>
+            <Badge>{comments.length}</Badge>
           </div>
 
           {comments.length === 0 ? (
-            <div className="meta" style={{ marginBottom: "20px" }}>
+            <div className="meta mb-xl">
               No comments yet. Be the first to add one!
             </div>
           ) : (
-            <ul className="commentList" style={{ marginBottom: "20px" }}>
-              {comments.map((c, index) => (
-                <li
-                  key={c.id}
-                  className="commentListItem"
-                  style={{ animationDelay: `${index * 0.05}s` }}
-                >
-                  <div
-                    className="meta"
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      marginBottom: "8px",
-                    }}
-                  >
-                    <span style={{ fontWeight: 600, color: "var(--accent-primary)" }}>
-                      {c.author_name ?? `User #${c.author_id}`}
-                    </span>
-                    <span>{new Date(c.created_at).toLocaleString()}</span>
+            <ul className="comment-list mb-xl">
+              {comments.map((c) => (
+                <li key={c.id} className="comment-item">
+                  <div className="spread mb-sm">
+                    <div className="flex items-center gap-sm">
+                      <Avatar name={c.author_name} size="sm" />
+                      <span className="font-semibold" style={{ color: "var(--accent-primary)" }}>
+                        {c.author_name ?? `User #${c.author_id}`}
+                      </span>
+                    </div>
+                    <span className="text-sm text-muted">{formatDate(c.created_at)}</span>
                   </div>
                   <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
                     {c.body}
@@ -196,9 +155,9 @@ export default function TicketsDetailsPage() {
             </ul>
           )}
 
-          <form onSubmit={addComment} className="form">
-            <div>
-              <label className="label">Add a comment</label>
+          <form onSubmit={addComment}>
+            <label className="label mb-sm">Add a comment</label>
+            <div className="comment-composer">
               <textarea
                 className="textarea"
                 value={newComment}
@@ -206,20 +165,15 @@ export default function TicketsDetailsPage() {
                 rows={4}
                 placeholder="Write your comment..."
               />
-            </div>
-            <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <button className="btn primary" disabled={!newComment || submitting}>
-                {submitting ? "Sending..." : "💬 Add Comment"}
-              </button>
+              <div className="comment-composer-footer">
+                <button className="btn primary" disabled={!newComment || submitting}>
+                  {submitting ? "Sending..." : "Add Comment"}
+                </button>
+              </div>
             </div>
           </form>
         </section>
       </div>
-    </Shell>
+    </Layout>
   );
-}
-
-function truncateText(text, max = 60) {
-  if (!text) return "";
-  return text.length > max ? `${text.slice(0, max)}…` : text;
 }

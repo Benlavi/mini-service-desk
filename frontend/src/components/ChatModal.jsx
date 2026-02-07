@@ -5,7 +5,7 @@ import { useAuth } from "../auth/AuthContext.jsx";
 export default function ChatModal({ open, onClose, onTicketCreated }) {
   const { token } = useAuth();
   const messagesEndRef = useRef(null);
-  
+
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -21,7 +21,7 @@ export default function ChatModal({ open, onClose, onTicketCreated }) {
     if (open && messages.length === 0) {
       setMessages([{
         role: "assistant",
-        content: "👋 Hi! I'm your IT support assistant. Tell me about the issue you're experiencing, and I'll help you create a support ticket.\n\nFor example:\n• \"My screen keeps flickering\"\n• \"I need Excel installed\"\n• \"The printer isn't working\"",
+        content: "Hi! I'm your IT support assistant. Tell me about the issue you're experiencing, and I'll help you create a support ticket.\n\nFor example:\n• \"My screen keeps flickering\"\n• \"I need Excel installed\"\n• \"The printer isn't working\"",
       }]);
     }
   }, [open]);
@@ -29,14 +29,14 @@ export default function ChatModal({ open, onClose, onTicketCreated }) {
   async function handleSend(e) {
     e.preventDefault();
     if (!input.trim() || loading) return;
-    
+
     const userMessage = input.trim();
     setInput("");
     setError(null);
     setTicketData(null);
     setMessages(prev => [...prev, { role: "user", content: userMessage }]);
     setLoading(true);
-    
+
     try {
       const response = await apiFetch("/api/chat/message", {
         token,
@@ -46,7 +46,7 @@ export default function ChatModal({ open, onClose, onTicketCreated }) {
           message: userMessage,
         },
       });
-      
+
       setMessages(prev => [...prev, { role: "assistant", content: response.response }]);
       if (response.ticket_data) {
         setTicketData(response.ticket_data);
@@ -62,14 +62,14 @@ export default function ChatModal({ open, onClose, onTicketCreated }) {
     if (!ticketData) return;
     setCreating(true);
     setError(null);
-    
+
     try {
       const ticket = await apiFetch("/api/chat/create-ticket", {
         token,
         method: "POST",
         json: ticketData,
       });
-      
+
       setMessages([]);
       setTicketData(null);
       onTicketCreated?.(ticket);
@@ -91,110 +91,75 @@ export default function ChatModal({ open, onClose, onTicketCreated }) {
   if (!open) return null;
 
   return (
-    <div className="modalOverlay" onClick={handleClose}>
-      <div 
-        className="modalCard" 
-        onClick={(e) => e.stopPropagation()} 
-        style={{ maxWidth: 600, height: "80vh", display: "flex", flexDirection: "column" }}
+    <div className="modal-overlay" onClick={handleClose}>
+      <div
+        className="modal"
+        onClick={(e) => e.stopPropagation()}
+        style={{ maxWidth: 600, height: "80vh" }}
       >
-        <div className="modalHead">
-          <h2 style={{ margin: 0 }}>🤖 AI Support Chat</h2>
-          <button className="btn ghost" onClick={handleClose}>✕</button>
+        <div className="modal-header">
+          <h2 className="modal-title">AI Support Chat</h2>
+          <button className="modal-close" onClick={handleClose}>×</button>
         </div>
 
-        {error && <div className="error" style={{ margin: "0 16px" }}>{error}</div>}
+        {error && <div className="error" style={{ margin: "0 var(--space-4)" }}>{error}</div>}
 
-        <div style={{ 
-          flex: 1, 
-          overflowY: "auto", 
-          padding: "16px",
-          display: "flex",
-          flexDirection: "column",
-          gap: "12px",
-        }}>
+        <div className="chat-container">
           {messages.map((msg, i) => (
             <div
               key={i}
-              style={{
-                alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
-                maxWidth: "85%",
-                padding: "12px 16px",
-                borderRadius: msg.role === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
-                background: msg.role === "user" 
-                  ? "linear-gradient(135deg, #7c5cff 0%, #00d4ff 100%)" 
-                  : "rgba(255, 255, 255, 0.05)",
-                color: msg.role === "user" ? "#fff" : "inherit",
-                whiteSpace: "pre-wrap",
-              }}
+              className={`chat-bubble ${msg.role === "user" ? "chat-bubble-user" : "chat-bubble-assistant"}`}
             >
               {msg.content}
             </div>
           ))}
-          
+
           {loading && (
-            <div style={{
-              alignSelf: "flex-start",
-              padding: "12px 16px",
-              borderRadius: "16px 16px 16px 4px",
-              background: "rgba(255, 255, 255, 0.05)",
-            }}>
-              ⏳ Thinking...
+            <div className="chat-typing">
+              <div className="chat-typing-dots">
+                <span className="chat-typing-dot" />
+                <span className="chat-typing-dot" />
+                <span className="chat-typing-dot" />
+              </div>
             </div>
           )}
           <div ref={messagesEndRef} />
         </div>
 
         {ticketData && (
-          <div style={{ 
-            margin: "0 16px 16px", 
-            padding: "16px", 
-            background: "rgba(34, 197, 94, 0.1)", 
-            borderRadius: 8,
-            border: "1px solid rgba(34, 197, 94, 0.3)",
-          }}>
-            <div style={{ fontWeight: 600, marginBottom: 8, color: "#22c55e" }}>
-              ✅ Ready to create ticket:
+          <div className="chat-ticket-preview">
+            <div className="chat-ticket-preview-title">
+              Ready to create ticket:
             </div>
-            <div style={{ fontSize: 14 }}>
+            <div className="chat-ticket-preview-details">
               <div><b>Description:</b> {ticketData.description}</div>
               <div><b>Urgency:</b> {ticketData.urgency}</div>
               <div><b>Category:</b> {ticketData.request_type}</div>
             </div>
-            <button 
-              className="btn primary" 
+            <button
+              className="btn primary w-full"
               onClick={handleCreateTicket}
               disabled={creating}
-              style={{ marginTop: 12, width: "100%" }}
+              style={{ marginTop: "var(--space-3)" }}
             >
-              {creating ? "Creating..." : "➕ Create Ticket"}
+              {creating ? "Creating..." : "Create Ticket"}
             </button>
-            <button 
-              className="btn ghost" 
+            <button
+              className="btn ghost w-full"
               onClick={() => { setTicketData(null); setMessages([]); }}
-              style={{ marginTop: 8, width: "100%" }}
+              style={{ marginTop: "var(--space-2)" }}
             >
-              ↩️ Start Over
+              Start Over
             </button>
           </div>
         )}
 
         {ticketData ? (
-          <div style={{ 
-            padding: "16px", 
-            borderTop: "1px solid rgba(255,255,255,0.08)",
-            textAlign: "center",
-            color: "var(--text-secondary)",
-            fontSize: 13,
-          }}>
-            👆 Create the ticket above or start over
+          <div className="chat-input-area disabled">
+            Create the ticket above or start over
           </div>
         ) : (
-          <form onSubmit={handleSend} style={{ 
-            padding: "16px", 
-            borderTop: "1px solid rgba(255,255,255,0.08)",
-            display: "flex",
-            gap: "8px",
-          }}>
+          <form onSubmit={handleSend} className="chat-input-area">
             <input
               className="input"
               value={input}
@@ -203,8 +168,8 @@ export default function ChatModal({ open, onClose, onTicketCreated }) {
               disabled={loading}
               style={{ flex: 1 }}
             />
-            <button 
-              className="btn primary" 
+            <button
+              className="btn primary"
               type="submit"
               disabled={loading || !input.trim()}
             >
