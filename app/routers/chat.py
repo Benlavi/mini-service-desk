@@ -16,11 +16,15 @@ from app.models.ticket import (
 from app.models.user import User
 from app.services.security import get_current_user
 from app.services.chat_service import (
-    chat_with_ollama,
+    ask_clarifying_question,
     check_ollama_status,
     pull_model,
-    extract_ticket_json,
+    extract_ticket_context,
     clean_response_for_display,
+    count_assistant_questions,
+    should_create_ticket,
+    next_question,
+    build_ticket_description,
 )
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -39,6 +43,8 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     response: str
     ticket_data: dict | None = None
+    ticket: TicketRead | None = None
+    chat_ended: bool = False
 
 
 class CreateTicketRequest(BaseModel):
@@ -64,6 +70,7 @@ async def trigger_pull(current_user: User = Depends(get_current_user)):
 @router.post("/message", response_model=ChatResponse)
 async def send_message(
     payload: ChatRequest,
+    session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
     """Send chat message and get AI response."""
@@ -81,13 +88,52 @@ async def send_message(
         )
 
     history = [{"role": m.role, "content": m.content} for m in payload.messages]
+    questions_asked = count_assistant_questions(history)
 
     try:
-        raw_response = await chat_with_ollama(history, payload.message)
-        ticket_data = extract_ticket_json(raw_response)
-        # Clean the response to hide JSON from user
-        clean_response = clean_response_for_display(raw_response)
-        return ChatResponse(response=clean_response, ticket_data=ticket_data)
+        extracted = await extract_ticket_context(history, payload.message)
+        questions_asked_after_reply = questions_asked + 1
+
+        if should_create_ticket(extracted, questions_asked_after_reply):
+            description = build_ticket_description(extracted)
+
+            try:
+                urgency = TicketUrgency(extracted.get("urgency", "normal"))
+            except ValueError:
+                urgency = TicketUrgency.normal
+
+            try:
+                request_type = TicketRequestType(extracted.get("request_type", "other"))
+            except ValueError:
+                request_type = TicketRequestType.other
+
+            ticket = Ticket(
+                description=description,
+                request_type=request_type,
+                urgency=urgency,
+                status=TicketStatus.new,
+                operator_id=None,
+                created_by_id=current_user.id,
+                created_at=now_utc(),
+                updated_at=now_utc(),
+            )
+            session.add(ticket)
+            session.commit()
+            session.refresh(ticket)
+
+            return ChatResponse(
+                response=f"Thanks, I created your ticket (#{ticket.id}). This chat is now complete.",
+                ticket=ticket,
+                ticket_data=None,
+                chat_ended=True,
+            )
+
+        question = next_question(extracted, questions_asked)
+        llm_question = await ask_clarifying_question(history, payload.message)
+        # Prefer deterministic question if model drifts from intake goal.
+        safe_question = llm_question if "?" in llm_question else question
+        clean_response = clean_response_for_display(safe_question)
+        return ChatResponse(response=clean_response, ticket_data=None, chat_ended=False)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

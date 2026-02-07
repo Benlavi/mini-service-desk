@@ -96,25 +96,25 @@ def patch_ticket(
         setattr(ticket, k, v)
 
     # ---- Backend rules to align with UI ----
-    # 1) assigned requires operator_id
-    if ticket.status == TicketStatus.assigned and ticket.operator_id is None:
-        raise HTTPException(
-            status_code=400, detail="Assigned status requires an operator"
-        )
-
-    # 2) new cannot have operator_id
-    if ticket.status == TicketStatus.new and ticket.operator_id is not None:
-        raise HTTPException(
-            status_code=400, detail="New status cannot have an operator assigned"
-        )
-
-    # 3) Auto-status: when operator becomes set, new -> assigned (unless admin explicitly set pending/closed)
+    # 1) Auto-status: when operator becomes set, new -> assigned (unless admin explicitly set pending/closed)
     operator_became_set = prev_operator_id is None and ticket.operator_id is not None
     status_was_explicitly_set = "status" in data
 
     if operator_became_set and not status_was_explicitly_set:
         if ticket.status == TicketStatus.new:
             ticket.status = TicketStatus.assigned
+
+    # 2) assigned requires operator_id
+    if ticket.status == TicketStatus.assigned and ticket.operator_id is None:
+        raise HTTPException(
+            status_code=400, detail="Assigned status requires an operator"
+        )
+
+    # 3) new cannot have operator_id
+    if ticket.status == TicketStatus.new and ticket.operator_id is not None:
+        raise HTTPException(
+            status_code=400, detail="New status cannot have an operator assigned"
+        )
 
     ticket.updated_at = now_utc()
 

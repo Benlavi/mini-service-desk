@@ -1,11 +1,14 @@
-# tests/test_tickets_role.py
 import uuid
+
+from sqlmodel import Session
+
+from app.models.user import User
+from app.services.security import hash_password
+from conftest import engine
 
 BASE = "/api/tickets"
 
-# Strong test passwords that meet all requirements
 TEST_PASSWORD = "TestPass123!"
-ADMIN_PASSWORD = "AdminPass123!"
 
 
 def auth_header(token: str) -> dict:
@@ -16,15 +19,31 @@ def unique_email(prefix="user") -> str:
     return f"{prefix}-{uuid.uuid4().hex[:8]}@example.com"
 
 
-def create_user(client, name, email=None, password=TEST_PASSWORD, is_admin=False):
+def create_user(client, name, email=None, password=TEST_PASSWORD):
     if email is None:
-        email = unique_email("admin" if is_admin else "user")
+        email = unique_email("user")
 
-    # Note: is_admin field is now ignored by the backend for security
     payload = {"name": name, "email": email, "password": password}
     r = client.post("/api/users", json=payload)
     assert r.status_code in (200, 201), r.text
     return r.json(), email
+
+
+def create_admin(name="Admin", email=None, password=TEST_PASSWORD):
+    if email is None:
+        email = unique_email("admin")
+
+    with Session(engine) as session:
+        admin = User(
+            name=name,
+            email=email,
+            hashed_password=hash_password(password),
+            is_admin=True,
+        )
+        session.add(admin)
+        session.commit()
+        session.refresh(admin)
+        return admin, email
 
 
 def login(client, email, password) -> str:
@@ -38,7 +57,7 @@ def login(client, email, password) -> str:
 
 
 def test_user_cant_patch_status_or_operator(client):
-    user, email = create_user(client, "U1", password=TEST_PASSWORD, is_admin=False)
+    _, email = create_user(client, "U1", password=TEST_PASSWORD)
     token = login(client, email, TEST_PASSWORD)
 
     r = client.post(
@@ -71,7 +90,104 @@ def test_user_cant_patch_status_or_operator(client):
     assert body["description"] == "Updated description"
 
 
-# NOTE: This test requires seeding an admin user since self-registration
-# as admin is no longer allowed (privilege escalation fix).
-# For now, we skip admin-specific tests that relied on self-registration.
-# In a real scenario, you would use a fixture that seeds an admin user directly.
+def test_non_admin_cannot_delete_ticket(client):
+    _, email = create_user(client, "U1")
+    token = login(client, email, TEST_PASSWORD)
+
+    r = client.post(
+        f"{BASE}/",
+        json={"description": "Issue A", "request_type": "software"},
+        headers=auth_header(token),
+    )
+    tid = r.json()["id"]
+
+    r = client.delete(f"{BASE}/{tid}", headers=auth_header(token))
+    assert r.status_code == 403, r.text
+
+
+def test_admin_can_delete_ticket(client):
+    _, owner_email = create_user(client, "Owner")
+    owner_token = login(client, owner_email, TEST_PASSWORD)
+    r = client.post(
+        f"{BASE}/",
+        json={"description": "Delete me", "request_type": "software"},
+        headers=auth_header(owner_token),
+    )
+    tid = r.json()["id"]
+
+    _, admin_email = create_admin()
+    admin_token = login(client, admin_email, TEST_PASSWORD)
+
+    r = client.delete(f"{BASE}/{tid}", headers=auth_header(admin_token))
+    assert r.status_code == 204, r.text
+
+    r = client.get(f"{BASE}/{tid}", headers=auth_header(admin_token))
+    assert r.status_code == 404
+
+
+def test_assigned_status_requires_operator(client):
+    _, owner_email = create_user(client, "Owner")
+    owner_token = login(client, owner_email, TEST_PASSWORD)
+    r = client.post(
+        f"{BASE}/",
+        json={"description": "Issue A", "request_type": "software"},
+        headers=auth_header(owner_token),
+    )
+    tid = r.json()["id"]
+
+    _, admin_email = create_admin()
+    admin_token = login(client, admin_email, TEST_PASSWORD)
+
+    r = client.patch(
+        f"{BASE}/{tid}",
+        json={"status": "assigned"},
+        headers=auth_header(admin_token),
+    )
+    assert r.status_code == 400
+    assert "requires an operator" in r.json()["detail"]
+
+
+def test_new_status_cannot_have_operator(client):
+    _, owner_email = create_user(client, "Owner")
+    owner_token = login(client, owner_email, TEST_PASSWORD)
+    r = client.post(
+        f"{BASE}/",
+        json={"description": "Issue A", "request_type": "software"},
+        headers=auth_header(owner_token),
+    )
+    tid = r.json()["id"]
+
+    admin, admin_email = create_admin()
+    admin_token = login(client, admin_email, TEST_PASSWORD)
+
+    r = client.patch(
+        f"{BASE}/{tid}",
+        json={"status": "new", "operator_id": admin.id},
+        headers=auth_header(admin_token),
+    )
+    assert r.status_code == 400
+    assert "cannot have an operator" in r.json()["detail"]
+
+
+def test_operator_assignment_auto_sets_status_to_assigned(client):
+    _, owner_email = create_user(client, "Owner")
+    owner_token = login(client, owner_email, TEST_PASSWORD)
+    r = client.post(
+        f"{BASE}/",
+        json={"description": "Issue A", "request_type": "software"},
+        headers=auth_header(owner_token),
+    )
+    tid = r.json()["id"]
+
+    admin, admin_email = create_admin()
+    admin_token = login(client, admin_email, TEST_PASSWORD)
+
+    r = client.patch(
+        f"{BASE}/{tid}",
+        json={"operator_id": admin.id},
+        headers=auth_header(admin_token),
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["operator_id"] == admin.id
+    assert body["status"] == "assigned"

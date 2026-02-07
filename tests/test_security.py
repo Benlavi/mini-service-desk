@@ -1,5 +1,17 @@
 """Security-focused tests for the mini-service-desk backend."""
 
+import uuid
+
+from sqlmodel import Session
+
+from app.models.user import User
+from app.services.security import hash_password
+from conftest import engine
+
+
+def unique_email(prefix: str = "user") -> str:
+    return f"{prefix}-{uuid.uuid4().hex[:8]}@example.com"
+
 
 def auth_header(token: str) -> dict:
     return {"Authorization": f"Bearer {token}"}
@@ -13,6 +25,21 @@ def login(client, email, password) -> str:
     )
     assert r.status_code == 200, r.text
     return r.json()["access_token"]
+
+
+def create_admin(name="Admin", email=None, password="StrongPass123!"):
+    email = email or unique_email("admin")
+    with Session(engine) as session:
+        admin = User(
+            name=name,
+            email=email,
+            hashed_password=hash_password(password),
+            is_admin=True,
+        )
+        session.add(admin)
+        session.commit()
+        session.refresh(admin)
+        return admin, email
 
 
 class TestPrivilegeEscalation:
@@ -102,15 +129,31 @@ class TestPasswordValidation:
 
     def test_strong_password_accepted(self, client):
         """Valid strong passwords should be accepted."""
+        email = unique_email("valid")
         r = client.post(
             "/api/users",
             json={
                 "name": "Test",
-                "email": "valid@example.com",
+                "email": email,
                 "password": "StrongPass123!",
             },
         )
         assert r.status_code == 201
+
+    def test_duplicate_email_rejected(self, client):
+        email = unique_email("dup")
+        r = client.post(
+            "/api/users",
+            json={"name": "U1", "email": email, "password": "StrongPass123!"},
+        )
+        assert r.status_code == 201
+
+        r = client.post(
+            "/api/users",
+            json={"name": "U2", "email": email, "password": "StrongPass123!"},
+        )
+        assert r.status_code == 400
+        assert "already exists" in r.json()["detail"].lower()
 
 
 class TestAuthenticationRequired:
@@ -160,6 +203,59 @@ class TestTokenValidation:
         assert r.status_code == 401
 
 
+class TestLoginSecurity:
+    def test_login_wrong_password_rejected(self, client):
+        email = unique_email("login")
+        client.post(
+            "/api/users",
+            json={"name": "User", "email": email, "password": "StrongPass123!"},
+        )
+        r = client.post(
+            "/api/users/login",
+            data={"username": email, "password": "WrongPass123!"},
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+        assert r.status_code == 401
+
+    def test_login_rate_limited_after_five_attempts(self, client):
+        for _ in range(5):
+            r = client.post(
+                "/api/users/login",
+                data={"username": "nobody@example.com", "password": "WrongPass123!"},
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+            )
+            assert r.status_code == 401
+
+        r = client.post(
+            "/api/users/login",
+            data={"username": "nobody@example.com", "password": "WrongPass123!"},
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+        assert r.status_code == 429
+
+    def test_register_rate_limited_after_three_attempts(self, client):
+        for i in range(3):
+            r = client.post(
+                "/api/users",
+                json={
+                    "name": f"U{i}",
+                    "email": unique_email("rate"),
+                    "password": "StrongPass123!",
+                },
+            )
+            assert r.status_code == 201
+
+        r = client.post(
+            "/api/users",
+            json={
+                "name": "U4",
+                "email": unique_email("rate"),
+                "password": "StrongPass123!",
+            },
+        )
+        assert r.status_code == 429
+
+
 class TestCSVExport:
     """Test CSV export endpoint - EX3 enhancement."""
 
@@ -171,15 +267,16 @@ class TestCSVExport:
     def test_export_returns_csv(self, client):
         """Authenticated users can export their tickets as CSV."""
         # Create a user and get token
+        email = unique_email("exporter")
         client.post(
             "/api/users",
             json={
                 "name": "Exporter",
-                "email": "exporter@example.com",
+                "email": email,
                 "password": "StrongPass123!",
             },
         )
-        token = login(client, "exporter@example.com", "StrongPass123!")
+        token = login(client, email, "StrongPass123!")
 
         # Create a ticket
         client.post(
@@ -194,3 +291,38 @@ class TestCSVExport:
         assert "text/csv" in r.headers.get("content-type", "")
         assert "attachment" in r.headers.get("content-disposition", "")
         assert "Test ticket" in r.text
+
+    def test_export_returns_404_when_user_has_no_tickets(self, client):
+        email = unique_email("empty-export")
+        client.post(
+            "/api/users",
+            json={"name": "NoTicket", "email": email, "password": "StrongPass123!"},
+        )
+        token = login(client, email, "StrongPass123!")
+
+        r = client.get("/api/export/tickets", headers=auth_header(token))
+        assert r.status_code == 404
+
+    def test_admin_export_includes_other_users_tickets(self, client):
+        user_email = unique_email("user")
+        client.post(
+            "/api/users",
+            json={
+                "name": "User",
+                "email": user_email,
+                "password": "StrongPass123!",
+            },
+        )
+        user_token = login(client, user_email, "StrongPass123!")
+        client.post(
+            "/api/tickets/",
+            json={"description": "Owned by user", "request_type": "software"},
+            headers=auth_header(user_token),
+        )
+
+        _, admin_email = create_admin()
+        admin_token = login(client, admin_email, "StrongPass123!")
+
+        r = client.get("/api/export/tickets", headers=auth_header(admin_token))
+        assert r.status_code == 200, r.text
+        assert "Owned by user" in r.text

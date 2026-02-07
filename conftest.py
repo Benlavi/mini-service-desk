@@ -19,10 +19,9 @@ def override_get_session():
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_db():
-    # fresh db file each run
+    # Fresh db file each run
     if os.path.exists("test.db"):
         os.remove("test.db")
-    SQLModel.metadata.create_all(engine)
     yield
     if os.path.exists("test.db"):
         os.remove("test.db")
@@ -30,6 +29,10 @@ def setup_db():
 
 @pytest.fixture()
 def client():
+    # Ensure full test isolation between cases
+    SQLModel.metadata.drop_all(engine)
+    SQLModel.metadata.create_all(engine)
+
     # Clear rate limiter before each test
     rate_limiter._requests.clear()
     app.dependency_overrides[get_session] = override_get_session

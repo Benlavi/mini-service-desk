@@ -10,8 +10,6 @@ export default function ChatModal({ open, onClose, onTicketCreated }) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [ticketData, setTicketData] = useState(null);
-  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -33,7 +31,6 @@ export default function ChatModal({ open, onClose, onTicketCreated }) {
     const userMessage = input.trim();
     setInput("");
     setError(null);
-    setTicketData(null);
     setMessages(prev => [...prev, { role: "user", content: userMessage }]);
     setLoading(true);
 
@@ -48,8 +45,15 @@ export default function ChatModal({ open, onClose, onTicketCreated }) {
       });
 
       setMessages(prev => [...prev, { role: "assistant", content: response.response }]);
-      if (response.ticket_data) {
-        setTicketData(response.ticket_data);
+      if (response.ticket) {
+        onTicketCreated?.(response.ticket);
+      }
+      if (response.chat_ended) {
+        setTimeout(() => {
+          setMessages([]);
+          setError(null);
+          onClose();
+        }, 1000);
       }
     } catch (e) {
       setError(e.message);
@@ -58,32 +62,8 @@ export default function ChatModal({ open, onClose, onTicketCreated }) {
     }
   }
 
-  async function handleCreateTicket() {
-    if (!ticketData) return;
-    setCreating(true);
-    setError(null);
-
-    try {
-      const ticket = await apiFetch("/api/chat/create-ticket", {
-        token,
-        method: "POST",
-        json: ticketData,
-      });
-
-      setMessages([]);
-      setTicketData(null);
-      onTicketCreated?.(ticket);
-      onClose();
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setCreating(false);
-    }
-  }
-
   function handleClose() {
     setMessages([]);
-    setTicketData(null);
     setError(null);
     onClose();
   }
@@ -126,57 +106,23 @@ export default function ChatModal({ open, onClose, onTicketCreated }) {
           <div ref={messagesEndRef} />
         </div>
 
-        {ticketData && (
-          <div className="chat-ticket-preview">
-            <div className="chat-ticket-preview-title">
-              Ready to create ticket:
-            </div>
-            <div className="chat-ticket-preview-details">
-              <div><b>Description:</b> {ticketData.description}</div>
-              <div><b>Urgency:</b> {ticketData.urgency}</div>
-              <div><b>Category:</b> {ticketData.request_type}</div>
-            </div>
-            <button
-              className="btn primary w-full"
-              onClick={handleCreateTicket}
-              disabled={creating}
-              style={{ marginTop: "var(--space-3)" }}
-            >
-              {creating ? "Creating..." : "Create Ticket"}
-            </button>
-            <button
-              className="btn ghost w-full"
-              onClick={() => { setTicketData(null); setMessages([]); }}
-              style={{ marginTop: "var(--space-2)" }}
-            >
-              Start Over
-            </button>
-          </div>
-        )}
-
-        {ticketData ? (
-          <div className="chat-input-area disabled">
-            Create the ticket above or start over
-          </div>
-        ) : (
-          <form onSubmit={handleSend} className="chat-input-area">
-            <input
-              className="input"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Describe your issue..."
-              disabled={loading}
-              style={{ flex: 1 }}
-            />
-            <button
-              className="btn primary"
-              type="submit"
-              disabled={loading || !input.trim()}
-            >
-              Send
-            </button>
-          </form>
-        )}
+        <form onSubmit={handleSend} className="chat-input-area">
+          <input
+            className="input"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Describe your issue..."
+            disabled={loading}
+            style={{ flex: 1 }}
+          />
+          <button
+            className="btn primary"
+            type="submit"
+            disabled={loading || !input.trim()}
+          >
+            Send
+          </button>
+        </form>
       </div>
     </div>
   );
