@@ -4,7 +4,13 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Avatar } from "./ui";
 import { getInitials } from "../utils";
 
-export default function Layout({ children, title, subtitle }) {
+export default function Layout({
+  children,
+  title,
+  subtitle,
+  showCreateTicketButton = false,
+  onCreateTicket = null,
+}) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -12,7 +18,6 @@ export default function Layout({ children, title, subtitle }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -157,20 +162,18 @@ export default function Layout({ children, title, subtitle }) {
             </button>
           </div>
 
-          <div className="topbar-center">
-            <div className="topbar-search">
-              <span className="topbar-search-icon" aria-label="Search"></span>
-              <input
-                type="text"
-                className="topbar-search-input"
-                placeholder="Search tickets..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-          </div>
+          <div className="topbar-center" />
 
           <div className="topbar-right">
+            {showCreateTicketButton && typeof onCreateTicket === "function" && (
+              <button
+                className="btn primary"
+                onClick={onCreateTicket}
+                style={{ marginRight: "var(--space-3)" }}
+              >
+                Create Ticket
+              </button>
+            )}
             <div className="dropdown">
               <div
                 className="topbar-avatar"

@@ -27,7 +27,9 @@ def create_user(client, name: str, email: str, password: str = TEST_PASSWORD):
     return r.json()
 
 
-def create_admin(name: str = "Admin", email: str | None = None, password: str = TEST_PASSWORD):
+def create_admin(
+    name: str = "Admin", email: str | None = None, password: str = TEST_PASSWORD
+):
     email = email or unique_email("admin")
     with Session(engine) as session:
         admin = User(
@@ -74,7 +76,9 @@ def test_user_can_add_and_list_comments_on_own_ticket(client):
     email = unique_email("user")
     create_user(client, "U1", email)
     token = login(client, email, TEST_PASSWORD)
-    tid = create_ticket(client, token, description="Printer Broken", request_type="hardware")
+    tid = create_ticket(
+        client, token, description="Printer Broken", request_type="hardware"
+    )
 
     r = client.post(
         f"{BASE_TICKETS}/{tid}/comments",

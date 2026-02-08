@@ -8,6 +8,9 @@ export default function CreateTicketModal({ open, onClose, onTicketCreated }) {
   const [description, setDescription] = useState("");
   const [requestType, setRequestType] = useState("software");
   const [urgency, setUrgency] = useState("normal");
+  const [aiInput, setAiInput] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiHints, setAiHints] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
@@ -41,7 +44,33 @@ export default function CreateTicketModal({ open, onClose, onTicketCreated }) {
     }
   }
 
+  async function handleAssistWithAI() {
+    if (!aiInput.trim() || aiLoading) return;
+    setError(null);
+    setAiLoading(true);
+    setAiHints([]);
+
+    try {
+      const suggestion = await apiFetch("/api/chat/assist-form", {
+        token,
+        method: "POST",
+        json: { message: aiInput.trim() },
+      });
+
+      setDescription(suggestion.description || aiInput.trim());
+      setRequestType(suggestion.request_type || "other");
+      setUrgency(suggestion.urgency || "normal");
+      setAiHints(suggestion.follow_up_questions || []);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
   function handleClose() {
+    setAiInput("");
+    setAiHints([]);
     setDescription("");
     setRequestType("software");
     setUrgency("normal");
@@ -66,6 +95,30 @@ export default function CreateTicketModal({ open, onClose, onTicketCreated }) {
 
         <div className="modal-body">
           <form onSubmit={handleSubmit} className="form">
+            <div className="form-group">
+              <label className="label">Describe In Your Own Words (AI Assist)</label>
+              <textarea
+                className="textarea"
+                value={aiInput}
+                onChange={(e) => setAiInput(e.target.value)}
+                rows={3}
+                placeholder="Example: My laptop freezes when opening Excel and I can't finish payroll."
+              />
+              <button
+                type="button"
+                className="btn info"
+                onClick={handleAssistWithAI}
+                disabled={!aiInput.trim() || aiLoading}
+              >
+                {aiLoading ? "Analyzing..." : "Fill Form With AI"}
+              </button>
+              {aiHints.length > 0 && (
+                <div className="text-sm text-muted" style={{ marginTop: "var(--space-2)" }}>
+                  Missing details to improve ticket quality: {aiHints.join(" ")}
+                </div>
+              )}
+            </div>
+
             <div className="form-group">
               <label className="label">Description</label>
               <textarea

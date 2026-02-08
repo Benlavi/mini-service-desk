@@ -90,10 +90,13 @@ def count_assistant_questions(messages: list[dict]) -> int:
 
 
 def missing_fields(extracted: dict) -> list[str]:
-    missing = [field for field in REQUIRED_FIELDS if not (extracted.get(field) or "").strip()]
-    if not (extracted.get("error_text") or "").strip() and not (
-        extracted.get("attempted_fix") or ""
-    ).strip():
+    missing = [
+        field for field in REQUIRED_FIELDS if not (extracted.get(field) or "").strip()
+    ]
+    if (
+        not (extracted.get("error_text") or "").strip()
+        and not (extracted.get("attempted_fix") or "").strip()
+    ):
         missing.append("error_text")
     return missing
 
@@ -109,7 +112,13 @@ def should_create_ticket(extracted: dict, questions_asked: int) -> bool:
 def next_question(extracted: dict, questions_asked: int) -> str:
     missing = missing_fields(extracted)
     if questions_asked < MIN_QUESTIONS:
-        for field in ("summary", "impact", "when_started", "error_text", "attempted_fix"):
+        for field in (
+            "summary",
+            "impact",
+            "when_started",
+            "error_text",
+            "attempted_fix",
+        ):
             if field in missing:
                 return QUESTION_BY_FIELD[field]
         return "Any additional details that could help IT reproduce this issue quickly?"
@@ -155,7 +164,10 @@ async def ask_clarifying_question(messages: list[dict], user_message: str) -> st
         if response.status_code != 200:
             raise RuntimeError(f"Ollama error: {response.text}")
         text = response.json().get("message", {}).get("content", "").strip()
-        return clean_response_for_display(text) or "Could you share one more detail about the issue?"
+        return (
+            clean_response_for_display(text)
+            or "Could you share one more detail about the issue?"
+        )
 
 
 async def extract_ticket_context(messages: list[dict], user_message: str) -> dict:
@@ -245,3 +257,239 @@ def clean_response_for_display(text: str) -> str:
     cleaned = re.sub(r"\{(?:[^{}]|(?:\{[^{}]*\}))*\}", "", cleaned).strip()
     cleaned = cleaned.strip()
     return cleaned
+
+
+def _rule_based_request_type(text: str) -> str:
+    t = text.lower()
+    if any(
+        k in t
+        for k in (
+            "wet",
+            "spill",
+            "spilled",
+            "cleaner",
+            "cleaning",
+            "janitor",
+            "flood",
+            "leak",
+            "leaking",
+            "water",
+        )
+    ):
+        return "logistics"
+    if any(
+        k in t
+        for k in (
+            "printer",
+            "screen",
+            "monitor",
+            "keyboard",
+            "mouse",
+            "laptop",
+            "hardware",
+            "battery",
+        )
+    ):
+        return "hardware"
+    if any(
+        k in t
+        for k in (
+            "vpn",
+            "network",
+            "wifi",
+            "internet",
+            "access card",
+            "badge",
+            "office",
+            "desk",
+            "room",
+            "temperature",
+        )
+    ):
+        return "environment"
+    if any(
+        k in t
+        for k in (
+            "delivery",
+            "shipment",
+            "supplies",
+            "asset tag",
+            "pickup",
+            "equipment request",
+        )
+    ):
+        return "logistics"
+    if any(
+        k in t
+        for k in (
+            "excel",
+            "outlook",
+            "app",
+            "software",
+            "install",
+            "login",
+            "password",
+            "error",
+            "crash",
+        )
+    ):
+        return "software"
+    return "other"
+
+
+def _rule_based_urgency(text: str) -> str:
+    t = text.lower()
+    if any(
+        k in t
+        for k in (
+            "flood",
+            "leak",
+            "spilled",
+            "water damage",
+            "electrical hazard",
+            "smoke",
+        )
+    ):
+        return "high"
+    if any(
+        k in t
+        for k in (
+            "urgent",
+            "asap",
+            "cannot work",
+            "can't work",
+            "production down",
+            "outage",
+            "blocked",
+        )
+    ):
+        return "high"
+    if any(
+        k in t for k in ("whenever", "low priority", "not urgent", "later", "minor")
+    ):
+        return "low"
+    return "normal"
+
+
+def _condense_description(text: str) -> str:
+    cleaned = re.sub(r"\s+", " ", text).strip()
+    if len(cleaned) <= 280:
+        return cleaned
+    return cleaned[:277].rstrip() + "..."
+
+
+def _extract_location_hint(text: str) -> str:
+    t = text.strip()
+    patterns = [
+        r"(floor\s+\d+[^,.]*)",
+        r"(table\s+\d+[^,.]*)",
+        r"(desk\s+\d+[^,.]*)",
+        r"(room\s+\d+[^,.]*)",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, t, re.IGNORECASE)
+        if match:
+            return match.group(1).strip()
+    return ""
+
+
+def _is_generic_summary(summary: str) -> bool:
+    s = (summary or "").strip().lower()
+    if not s:
+        return True
+    generic_tokens = (
+        "ticket-intake request",
+        "support request",
+        "it issue",
+        "unknown",
+        "n/a",
+        "not provided",
+    )
+    return any(token in s for token in generic_tokens)
+
+
+def _build_rule_description(text: str, request_type: str) -> str:
+    cleaned = _condense_description(text)
+    location = _extract_location_hint(text)
+
+    if request_type == "logistics" and any(
+        k in text.lower() for k in ("wet", "spill", "clean", "cleaner", "water")
+    ):
+        base = "Issue: Wet/spill cleanup request"
+        if location:
+            base += f" at {location}"
+        return f"{base} | Details: {cleaned}"
+
+    if request_type == "environment" and location:
+        return f"Issue: Workplace environment issue at {location} | Details: {cleaned}"
+
+    return cleaned
+
+
+def _missing_detail_prompts(text: str, request_type: str) -> list[str]:
+    t = text.lower()
+    prompts = []
+    if not any(
+        k in t
+        for k in (
+            "since",
+            "started",
+            "today",
+            "yesterday",
+            "week",
+            "hour",
+            "morning",
+            "afternoon",
+        )
+    ):
+        prompts.append("When did the issue start?")
+
+    if request_type in {"software", "hardware", "environment"}:
+        if not any(k in t for k in ("error", "message", "code", "failed", "symptom")):
+            prompts.append("Do you see an error message or specific symptom?")
+        if not any(
+            k in t for k in ("tried", "restart", "reboot", "reinstall", "checked")
+        ):
+            prompts.append("What steps have you already tried?")
+    elif request_type == "logistics":
+        if not any(k in t for k in ("floor", "room", "table", "desk", "location")):
+            prompts.append("What is the exact location?")
+        if not any(k in t for k in ("urgent", "asap", "safety", "hazard", "blocking")):
+            prompts.append("Is this creating a safety risk or urgent blockage?")
+    else:
+        if not any(k in t for k in ("details", "impact", "blocked", "unable")):
+            prompts.append("What is the impact right now?")
+    return prompts[:3]
+
+
+async def suggest_ticket_from_text(text: str) -> dict:
+    """
+    AI-assisted extraction for form mode.
+    Returns robust suggestions with deterministic fallback.
+    """
+    extracted = await extract_ticket_context([], text)
+
+    request_type_from_llm = extracted.get("request_type") or "other"
+    request_type_rule = _rule_based_request_type(text)
+    request_type = (
+        request_type_from_llm if request_type_from_llm != "other" else request_type_rule
+    )
+    request_type = _normalize_request_type(request_type)
+
+    description = build_ticket_description(extracted)
+    if (
+        description == "User reported an issue through AI chat intake."
+        or _is_generic_summary(extracted.get("summary", ""))
+    ):
+        description = _build_rule_description(text, request_type)
+
+    urgency_from_llm = extracted.get("urgency") or "normal"
+    urgency_rule = _rule_based_urgency(text)
+    urgency = urgency_rule if urgency_from_llm == "normal" else urgency_from_llm
+
+    return {
+        "description": description,
+        "urgency": _normalize_urgency(urgency),
+        "request_type": request_type,
+        "follow_up_questions": _missing_detail_prompts(text, request_type),
+    }

@@ -1,3 +1,5 @@
+import pytest
+
 from app.services.chat_service import (
     MIN_QUESTIONS,
     MAX_QUESTIONS,
@@ -7,6 +9,7 @@ from app.services.chat_service import (
     should_create_ticket,
     build_ticket_description,
     next_question,
+    suggest_ticket_from_text,
 )
 
 
@@ -23,7 +26,10 @@ def test_clean_response_removes_json_block():
 
 def test_count_assistant_questions_ignores_welcome():
     messages = [
-        {"role": "assistant", "content": "Hi! I'm your IT support assistant. Tell me about the issue?"},
+        {
+            "role": "assistant",
+            "content": "Hi! I'm your IT support assistant. Tell me about the issue?",
+        },
         {"role": "assistant", "content": "When did this start?"},
         {"role": "assistant", "content": "Do you see any error message?"},
         {"role": "user", "content": "Since yesterday"},
@@ -79,3 +85,53 @@ def test_next_question_targets_missing_fields():
     }
     q = next_question(extracted, 0)
     assert q.endswith("?")
+
+
+@pytest.mark.anyio
+async def test_suggest_ticket_handles_logistics_wet_desk(monkeypatch):
+    async def fake_extract(_messages, _message):
+        return {
+            "summary": "",
+            "impact": "",
+            "when_started": "",
+            "error_text": "",
+            "attempted_fix": "",
+            "urgency": "normal",
+            "request_type": "other",
+        }
+
+    monkeypatch.setattr(
+        "app.services.chat_service.extract_ticket_context", fake_extract
+    )
+    result = await suggest_ticket_from_text(
+        "my desk is wet please send a cleaner to floor 3 table 201"
+    )
+    assert result["request_type"] == "logistics"
+    assert "Wet/spill cleanup request" in result["description"]
+    assert "floor 3 table 201" in result["description"].lower()
+    assert all("error message" not in q.lower() for q in result["follow_up_questions"])
+
+
+@pytest.mark.anyio
+async def test_suggest_ticket_replaces_generic_llm_summary(monkeypatch):
+    async def fake_extract(_messages, _message):
+        return {
+            "summary": "ticket-intake request",
+            "impact": "",
+            "when_started": "",
+            "error_text": "",
+            "attempted_fix": "",
+            "urgency": "normal",
+            "request_type": "other",
+        }
+
+    monkeypatch.setattr(
+        "app.services.chat_service.extract_ticket_context", fake_extract
+    )
+    raw_text = "Need cleaner in room 12, water leak near desk 5."
+    result = await suggest_ticket_from_text(raw_text)
+    assert "ticket-intake request" not in result["description"].lower()
+    assert (
+        "water leak" in result["description"].lower()
+        or "wet/spill" in result["description"].lower()
+    )

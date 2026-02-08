@@ -25,6 +25,7 @@ from app.services.chat_service import (
     should_create_ticket,
     next_question,
     build_ticket_description,
+    suggest_ticket_from_text,
 )
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -51,6 +52,17 @@ class CreateTicketRequest(BaseModel):
     description: str
     urgency: str = "normal"
     request_type: str = "other"
+
+
+class AssistFormRequest(BaseModel):
+    message: str
+
+
+class AssistFormResponse(BaseModel):
+    description: str
+    urgency: str
+    request_type: str
+    follow_up_questions: list[str] = []
 
 
 @router.get("/status")
@@ -136,6 +148,36 @@ async def send_message(
         return ChatResponse(response=clean_response, ticket_data=None, chat_ended=False)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/assist-form", response_model=AssistFormResponse)
+async def assist_form(
+    payload: AssistFormRequest,
+    _current_user: User = Depends(get_current_user),
+):
+    """AI-assisted extraction for form-based ticket creation."""
+    raw = payload.message.strip()
+    if not raw:
+        raise HTTPException(status_code=400, detail="Message is required")
+
+    ollama_status = await check_ollama_status()
+    if not ollama_status.get("available"):
+        raise HTTPException(
+            status_code=503, detail="Ollama not available. Starting up..."
+        )
+
+    if not ollama_status.get("model_ready"):
+        await pull_model()
+        raise HTTPException(
+            status_code=503, detail="Model downloading. Please wait 1-2 minutes..."
+        )
+
+    try:
+        suggestion = await suggest_ticket_from_text(raw)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return AssistFormResponse(**suggestion)
 
 
 @router.post("/create-ticket", response_model=TicketRead, status_code=201)

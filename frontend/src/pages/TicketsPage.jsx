@@ -3,19 +3,17 @@ import { apiFetch } from "../api/client.js";
 import { useAuth } from "../auth/AuthContext.jsx";
 import { Link } from "react-router-dom";
 import Layout from "../components/Layout.jsx";
-import ChatModal from "../components/ChatModal.jsx";
 import CreateTicketModal from "../components/CreateTicketModal.jsx";
 import { Badge } from "../components/ui";
 import { truncateText, getStatusClass, getUrgencyClass } from "../utils";
 
 export default function TicketsPage() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
 
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
 
-  const [chatOpen, setChatOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
 
   // Split tickets into active and closed
@@ -30,7 +28,10 @@ export default function TicketsPage() {
     setLoading(true);
     try {
       const data = await apiFetch("/api/tickets/", { token });
-      setTickets(data);
+      const myTickets = user?.is_admin
+        ? data.filter((t) => t.created_by_id === user.id)
+        : data;
+      setTickets(myTickets);
     } catch (e) {
       setErr(e.message);
     } finally {
@@ -72,22 +73,12 @@ export default function TicketsPage() {
 
   return (
     <>
-      <Layout title="My Tickets" subtitle="Create and track your support requests">
-        {/* Action Buttons */}
-        <div className="page-actions">
-          <button
-            className="btn primary"
-            onClick={() => setManualOpen(true)}
-          >
-            Create Ticket
-          </button>
-          <button
-            className="btn info"
-            onClick={() => setChatOpen(true)}
-          >
-            Create with AI
-          </button>
-        </div>
+      <Layout
+        title="My Tickets"
+        subtitle="Create and track your support requests"
+        showCreateTicketButton
+        onCreateTicket={() => setManualOpen(true)}
+      >
 
         {err && <div className="error">{err}</div>}
 
@@ -147,11 +138,6 @@ export default function TicketsPage() {
       </Layout>
 
       {/* Modals */}
-      <ChatModal
-        open={chatOpen}
-        onClose={() => setChatOpen(false)}
-        onTicketCreated={() => loadTickets()}
-      />
       <CreateTicketModal
         open={manualOpen}
         onClose={() => setManualOpen(false)}
